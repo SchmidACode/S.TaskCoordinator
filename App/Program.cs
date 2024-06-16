@@ -1,6 +1,7 @@
 ﻿using App;
 using System;
 using System.Windows.Forms;
+using System.Data.SQLite;
 
 namespace WindowsFormsApp
 {
@@ -21,8 +22,9 @@ namespace WindowsFormsApp
 					if (!IsConditionMet())
 					{
 						// Если условие не выполнено, открываем окно настроек
-						using (SettingsForm settingsForm = new SettingsForm())
+						using (ScheduleForm settingsForm = new ScheduleForm())
 						{
+							MessageBox.Show("Настройка плана должна быть как минимум на 1 день", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
 							if (settingsForm.ShowDialog() == DialogResult.OK)
 							{
 								// После закрытия окна настроек, открываем главное окно
@@ -41,10 +43,8 @@ namespace WindowsFormsApp
 
 		static bool IsConditionMet()
 		{
-			// Здесь нужно проверить ваше условие
-			// Например, проверка существования файла настроек
-			// return File.Exists("settings.config");
-			return false; // Временно возвращаем false для демонстрации
+			App.Connector con = new App.Connector();
+			return con.IsExists("Schedule"); 
 		}
 	}
 }

@@ -32,6 +32,8 @@ namespace App
 			this.StartPosition = FormStartPosition.CenterScreen;
 			labelInformation.Location = new System.Drawing.Point(panelCenterX - labelWidth / 2, panelCenterY - labelHeight / 2);
 			if (CheckAndCreateDatabase() == true) StartCloseTimer();
+
+
 		}
 
 		private bool CheckAndCreateDatabase()
@@ -64,30 +66,30 @@ namespace App
 				return false;
 			}
 		}
-		private void CreateTables(SQLiteConnection connection) 
+		private void CreateTables(SQLiteConnection connection)
 		{
 			string createScheduleTableQuery = @"
-                CREATE TABLE Schedule (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Plan TEXT NOT NULL,
-                    StartTime DATETIME NOT NULL,
-                    EndTime DATETIME NOT NULL
-				)";
+        CREATE TABLE Schedule (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Plan TEXT NOT NULL,
+            DayOfWeek INTEGER NOT NULL,
+            StartTime TEXT NOT NULL,
+            EndTime TEXT NOT NULL
+        )";
 
 			string createTasksTableQuery = @"
-                CREATE TABLE Tasks (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Title TEXT NOT NULL,
-                    DueDate DATETIME NOT NULL,
-                    Priority INTEGER NOT NULL
-                )";
-
+        CREATE TABLE Tasks (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Title TEXT NOT NULL,
+			CompleteTime TEXT NOT NULL,
+            DueDate TEXT NOT NULL,
+            Priority INTEGER NOT NULL
+        )";
 			using (var command = new SQLiteCommand(createScheduleTableQuery, connection))
 				command.ExecuteNonQuery();
 
 			using (var command = new SQLiteCommand(createTasksTableQuery, connection))
 				command.ExecuteNonQuery();
-			
 		}
 		private void StartCloseTimer()
 		{
@@ -96,7 +98,6 @@ namespace App
 			closeTimer.Tick += CloseTimer_Tick;
 			closeTimer.Start();
 		}
-
 		private void CloseTimer_Tick(object sender, EventArgs e)
 		{
 			closeTimer.Stop();

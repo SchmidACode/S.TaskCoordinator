@@ -10,9 +10,9 @@ using System.Windows.Forms;
 
 namespace App
 {
-	public partial class SettingsForm : Form
+	public partial class DelayForm : Form
 	{
-		public SettingsForm()
+		public DelayForm()
 		{
 			InitializeComponent();
 		}
