@@ -6,7 +6,7 @@ namespace App
 {
 	internal class Connector
 	{
-		public string ConnectionString { get; }
+		private string ConnectionString;
 		public Connector()
 		{
 			ConnectionString = "Data Source=MyApp.db;Version=3;";

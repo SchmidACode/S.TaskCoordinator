@@ -61,8 +61,6 @@ namespace App
 				dataGridView1.Columns["Plan"].HeaderText = "План";
 				dataGridView1.Columns["Id"].Visible = false;
 				dataGridView1.Columns["DayOfWeek"].Visible = false;
-				//dataGridView1.Columns["StartTime"].HeaderText = "Начало";
-				//dataGridView1.Columns["EndTime"].HeaderText = "Конец";
 				dataGridView1.Columns["StartTime"].Visible = false;
 				dataGridView1.Columns["EndTime"].Visible = false;
 			}

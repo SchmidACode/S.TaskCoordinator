@@ -74,13 +74,14 @@
 			// 
 			// dateStartTime
 			// 
-			this.dateStartTime.CustomFormat = "hh\\:mm";
+			this.dateStartTime.CustomFormat = "HH:mm";
 			this.dateStartTime.Format = System.Windows.Forms.DateTimePickerFormat.Time;
 			this.dateStartTime.Location = new System.Drawing.Point(12, 66);
 			this.dateStartTime.Name = "dateStartTime";
 			this.dateStartTime.ShowUpDown = true;
 			this.dateStartTime.Size = new System.Drawing.Size(237, 20);
 			this.dateStartTime.TabIndex = 5;
+			this.dateStartTime.Value = new System.DateTime(2024, 6, 17, 0, 0, 0, 0);
 			// 
 			// dataGridView1
 			// 
@@ -90,19 +91,21 @@
 			this.dataGridView1.Location = new System.Drawing.Point(12, 125);
 			this.dataGridView1.Name = "dataGridView1";
 			this.dataGridView1.ReadOnly = true;
+			this.dataGridView1.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.dataGridView1.Size = new System.Drawing.Size(536, 313);
 			this.dataGridView1.TabIndex = 6;
 			this.dataGridView1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.dataGridView1_KeyDown);
 			// 
 			// dateEndTime
 			// 
-			this.dateEndTime.CustomFormat = "hh\\:mm";
+			this.dateEndTime.CustomFormat = "HH:mm";
 			this.dateEndTime.Format = System.Windows.Forms.DateTimePickerFormat.Time;
 			this.dateEndTime.Location = new System.Drawing.Point(12, 92);
 			this.dateEndTime.Name = "dateEndTime";
 			this.dateEndTime.ShowUpDown = true;
 			this.dateEndTime.Size = new System.Drawing.Size(237, 20);
 			this.dateEndTime.TabIndex = 7;
+			this.dateEndTime.Value = new System.DateTime(2024, 6, 17, 0, 0, 0, 0);
 			// 
 			// lblTaskName
 			// 
@@ -180,6 +183,7 @@
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.BackColor = System.Drawing.SystemColors.Control;
 			this.ClientSize = new System.Drawing.Size(560, 450);
 			this.Controls.Add(this.btnQuestion);
 			this.Controls.Add(this.btnFinish);
@@ -195,7 +199,8 @@
 			this.Controls.Add(this.comboBox1);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Name = "ScheduleForm";
-			this.Text = "Настройки";
+			this.ShowIcon = false;
+			this.Text = "Редактирование расписания";
 			((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
 			this.contextMenuStrip1.ResumeLayout(false);
 			this.ResumeLayout(false);

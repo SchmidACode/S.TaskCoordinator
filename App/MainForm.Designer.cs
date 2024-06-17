@@ -28,13 +28,19 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
 			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
 			this.настройкиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.ScheduleToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.CaseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.DelayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.dataGridView1 = new System.Windows.Forms.DataGridView();
+			this.timer1 = new System.Windows.Forms.Timer(this.components);
+			this.labelFreeTime = new System.Windows.Forms.Label();
+			this.labelBusyTime = new System.Windows.Forms.Label();
 			this.menuStrip1.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// menuStrip1
@@ -78,12 +84,60 @@
 			this.DelayToolStripMenuItem.Text = "Промежуток";
 			this.DelayToolStripMenuItem.Click += new System.EventHandler(this.DelayToolStripMenuItem_Click);
 			// 
+			// dataGridView1
+			// 
+			this.dataGridView1.AllowUserToAddRows = false;
+			this.dataGridView1.AllowUserToDeleteRows = false;
+			this.dataGridView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.dataGridView1.BackgroundColor = System.Drawing.SystemColors.ActiveCaptionText;
+			this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.dataGridView1.Location = new System.Drawing.Point(0, 27);
+			this.dataGridView1.MultiSelect = false;
+			this.dataGridView1.Name = "dataGridView1";
+			this.dataGridView1.Size = new System.Drawing.Size(445, 423);
+			this.dataGridView1.TabIndex = 1;
+			// 
+			// timer1
+			// 
+			this.timer1.Enabled = true;
+			this.timer1.Interval = 60000;
+			this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
+			// 
+			// labelFreeTime
+			// 
+			this.labelFreeTime.Anchor = System.Windows.Forms.AnchorStyles.Right;
+			this.labelFreeTime.AutoSize = true;
+			this.labelFreeTime.Font = new System.Drawing.Font("Rockwell", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.labelFreeTime.ForeColor = System.Drawing.Color.White;
+			this.labelFreeTime.Location = new System.Drawing.Point(451, 57);
+			this.labelFreeTime.Name = "labelFreeTime";
+			this.labelFreeTime.Size = new System.Drawing.Size(119, 19);
+			this.labelFreeTime.TabIndex = 2;
+			this.labelFreeTime.Text = "Свободное время:";
+			// 
+			// labelBusyTime
+			// 
+			this.labelBusyTime.Anchor = System.Windows.Forms.AnchorStyles.Right;
+			this.labelBusyTime.AutoSize = true;
+			this.labelBusyTime.Font = new System.Drawing.Font("Rockwell", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.labelBusyTime.ForeColor = System.Drawing.Color.White;
+			this.labelBusyTime.Location = new System.Drawing.Point(451, 142);
+			this.labelBusyTime.Name = "labelBusyTime";
+			this.labelBusyTime.Size = new System.Drawing.Size(125, 57);
+			this.labelBusyTime.TabIndex = 3;
+			this.labelBusyTime.Text = "Время отведенное \r\nна занятия:\r\n\r\n";
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.BackColor = System.Drawing.SystemColors.MenuHighlight;
+			this.BackColor = System.Drawing.SystemColors.InfoText;
 			this.ClientSize = new System.Drawing.Size(595, 450);
+			this.Controls.Add(this.labelBusyTime);
+			this.Controls.Add(this.labelFreeTime);
+			this.Controls.Add(this.dataGridView1);
 			this.Controls.Add(this.menuStrip1);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MainMenuStrip = this.menuStrip1;
@@ -91,6 +145,7 @@
 			this.Text = "Task Coordinator";
 			this.menuStrip1.ResumeLayout(false);
 			this.menuStrip1.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
@@ -103,6 +158,10 @@
 		private System.Windows.Forms.ToolStripMenuItem ScheduleToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem CaseToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem DelayToolStripMenuItem;
+		private System.Windows.Forms.DataGridView dataGridView1;
+		private System.Windows.Forms.Timer timer1;
+		private System.Windows.Forms.Label labelFreeTime;
+		private System.Windows.Forms.Label labelBusyTime;
 	}
 }
 

@@ -18,6 +18,7 @@ namespace App
 	public partial class WelcomeForm : Form
 	{
 		private string databasePath = "MyApp.db";
+		private string configFilePath = "config.cfg";
 		private Timer closeTimer;
 		public WelcomeForm()
 		{
@@ -39,7 +40,7 @@ namespace App
 		private bool CheckAndCreateDatabase()
 		{
 			try {
-				if (!File.Exists(databasePath))
+				if (!File.Exists(databasePath) || !File.Exists(configFilePath))
 				{
 					SQLiteConnection.CreateFile(databasePath);
 					using (var connection = new SQLiteConnection($"Data Source={databasePath};Version=3")) {
@@ -69,27 +70,28 @@ namespace App
 		private void CreateTables(SQLiteConnection connection)
 		{
 			string createScheduleTableQuery = @"
-        CREATE TABLE Schedule (
+			CREATE TABLE Schedule (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Plan TEXT NOT NULL,
             DayOfWeek INTEGER NOT NULL,
             StartTime TEXT NOT NULL,
             EndTime TEXT NOT NULL
-        )";
+			)";
 
 			string createTasksTableQuery = @"
-        CREATE TABLE Tasks (
+			CREATE TABLE Tasks (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Title TEXT NOT NULL,
 			CompleteTime TEXT NOT NULL,
             DueDate TEXT NOT NULL,
             Priority INTEGER NOT NULL
-        )";
+			)";
 			using (var command = new SQLiteCommand(createScheduleTableQuery, connection))
 				command.ExecuteNonQuery();
 
 			using (var command = new SQLiteCommand(createTasksTableQuery, connection))
 				command.ExecuteNonQuery();
+			File.WriteAllText(configFilePath, "00:20:00\n00:00:00\n23:59:59");
 		}
 		private void StartCloseTimer()
 		{

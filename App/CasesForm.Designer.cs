@@ -101,10 +101,13 @@
 			// 
 			// dateTimePicker
 			// 
+			this.dateTimePicker.CustomFormat = "yyyy/MM/dd   HH:mm";
+			this.dateTimePicker.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
 			this.dateTimePicker.Location = new System.Drawing.Point(111, 64);
 			this.dateTimePicker.Name = "dateTimePicker";
 			this.dateTimePicker.Size = new System.Drawing.Size(138, 20);
 			this.dateTimePicker.TabIndex = 17;
+			this.dateTimePicker.Value = new System.DateTime(2024, 6, 17, 0, 0, 0, 0);
 			// 
 			// dataGridView
 			// 
@@ -114,6 +117,7 @@
 			this.dataGridView.Location = new System.Drawing.Point(12, 90);
 			this.dataGridView.Name = "dataGridView";
 			this.dataGridView.ReadOnly = true;
+			this.dataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.dataGridView.Size = new System.Drawing.Size(536, 291);
 			this.dataGridView.TabIndex = 16;
 			this.dataGridView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.dataGridView1_KeyDown);
@@ -170,7 +174,7 @@
 			// 
 			// dateTimePicker1
 			// 
-			this.dateTimePicker1.CustomFormat = "hh\\:mm";
+			this.dateTimePicker1.CustomFormat = "HH:mm";
 			this.dateTimePicker1.Format = System.Windows.Forms.DateTimePickerFormat.Time;
 			this.dateTimePicker1.Location = new System.Drawing.Point(158, 37);
 			this.dateTimePicker1.Name = "dateTimePicker1";
@@ -208,7 +212,8 @@
 			this.Controls.Add(this.richTextBox);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Name = "CasesForm";
-			this.Text = "Дела";
+			this.ShowIcon = false;
+			this.Text = "Редактирование дел";
 			((System.ComponentModel.ISupportInitialize)(this.dataGridView)).EndInit();
 			((System.ComponentModel.ISupportInitialize)(this.numericUpDown)).EndInit();
 			this.contextMenuStrip1.ResumeLayout(false);

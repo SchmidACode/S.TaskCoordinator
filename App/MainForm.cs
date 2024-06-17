@@ -5,40 +5,29 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using System.IO;
 
 namespace App
 {
 	public partial class MainForm : Form
 	{
-		DataGridView dataGridView1;
-		Connector connector;
-		TimeSpan Delay = TimeSpan.Parse("00:20:00");
+		private string configFilePath = "config.cfg";
+		private Connector connector;
+		private TimeSpan Delay;
+		private TimeSpan FreeTime = TimeSpan.Zero, BusyTime = TimeSpan.Zero;
 
 		public MainForm()
 		{
 			InitializeComponent();
 
+			Delay = TimeSpan.Parse(File.ReadAllLines(configFilePath)[0]);
 			connector = new Connector();
-			dataGridView1 = new DataGridView
-			{
-				Dock = DockStyle.Fill,
-				AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-				AllowUserToAddRows = false,
-				AllowUserToDeleteRows = false,
-				ReadOnly = true
-			};
+
+			dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+			dataGridView1.ReadOnly = true;
 
 			Controls.Add(dataGridView1);
-
-			DataTable scheduleData = connector.LoadSortedDataFromDB("SELECT * FROM Schedule");
-			DataTable tasksData = connector.LoadSortedDataFromDB("SELECT * FROM Tasks");
-
-			DataTable mergedData = MergeScheduleAndTasks(scheduleData, tasksData, Delay);
-			dataGridView1.DataSource = mergedData;
-
-			dataGridView1.Columns["Type"].Visible = false;
-			dataGridView1.Columns["DayOfWeekNumber"].Visible = false;
-			dataGridView1.Sort(dataGridView1.Columns["DayOfWeekNumber"], ListSortDirection.Ascending);
+			LoadAndUpdateData();
 
 			dataGridView1.ColumnHeaderMouseClick += DataGridView1_ColumnHeaderMouseClick;
 			dataGridView1.DataBindingComplete += DataGridView1_DataBindingComplete;
@@ -50,6 +39,35 @@ namespace App
 		//		Console.WriteLine($"{column.ColumnName}: {column.DataType}");
 		//	}
 		//}
+		private void LoadAndUpdateData()
+		{
+			try
+			{
+				FreeTime = BusyTime = TimeSpan.Zero;
+				DataTable scheduleData = connector.LoadSortedDataFromDB("SELECT * FROM Schedule");
+				DataTable tasksData = connector.LoadSortedDataFromDB("SELECT * FROM Tasks");
+
+				DataTable mergedData = MergeScheduleAndTasks(scheduleData, tasksData, Delay);
+				dataGridView1.DataSource = mergedData;
+
+				labelFreeTime.Text = $"Свободное время:\n{FreeTime}";
+				labelBusyTime.Text = $"Время отведенное\nна занятия:\n{BusyTime}";
+
+				dataGridView1.Columns["Type"].Visible = false;
+				dataGridView1.Columns["DayOfWeekNumber"].Visible = false;
+				dataGridView1.Sort(dataGridView1.Columns["DayOfWeekNumber"], ListSortDirection.Ascending);
+				dataGridView1.ClearSelection();
+
+				dataGridView1.Columns["DayOfWeek"].HeaderText = "День недели";
+				dataGridView1.Columns["TimeInterval"].HeaderText = "Время";
+				dataGridView1.Columns["Priority"].HeaderText = "Приоритет";
+				dataGridView1.Columns["Plan"].HeaderText = "Название";
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}");
+			}
+		}
 		private DataTable ConvertColumnType(DataTable dt, string columnName, Type newType)
 		{
 			DataTable newTable = dt.Clone();
@@ -153,32 +171,56 @@ namespace App
 		}
 		private string InsertTasksIntoFreeTime(DataTable mergedTable, List<DataRow> tasksList, string russianDayOfWeek, int dayOfWeek, TimeSpan freeTimeStart, TimeSpan freeTimeEnd, TimeSpan delay)
 		{
-			foreach (var taskRow in tasksList.ToList())
+			// Чтение config файла
+			string[] configLines = File.ReadAllLines(configFilePath);
+			TimeSpan BorderStartTime = TimeSpan.Parse(configLines[1]);
+			TimeSpan BorderEndTime = TimeSpan.Parse(configLines[2]);
+
+			TimeSpan currentFreeTimeStart = freeTimeStart;
+
+			// Сортируем задачи по приоритету в порядке убывания (более высокий приоритет первым)
+			var sortedTasks = tasksList.OrderByDescending(task => Convert.ToInt32(task["Priority"])).ToList();
+
+			// Перебираем каждое задание и пытаемся вписать его в свободное время
+			foreach (var taskRow in sortedTasks.ToList())
 			{
 				TimeSpan taskDuration = TimeSpan.Parse(taskRow["CompleteTime"].ToString());
+				DateTime dueDate = DateTime.Parse(taskRow["DueDate"].ToString());
 
-				// Вычисляем время начала и окончания с учетом задержки
-				TimeSpan taskStartTime = freeTimeStart + delay;
-				TimeSpan taskEndTime = taskStartTime + taskDuration;
-
-				if (taskEndTime <= freeTimeEnd)
+				if (dueDate > DateTime.Now + taskDuration) // Проверяем, не просрочено ли задание
 				{
-					int priority = Convert.ToInt32(taskRow["Priority"]);
-					mergedTable.Rows.Add(russianDayOfWeek, $"{freeTimeStart} - {taskStartTime}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);
-					mergedTable.Rows.Add(russianDayOfWeek, $"{taskStartTime} - {taskEndTime}", "Mandatory", priority, taskRow.Field<string>("Title"), dayOfWeek);
-					tasksList.Remove(taskRow); // Удаляем задачу, как только она будет запланирована
+					// Рассчитываем время начала и окончания задания с учетом задержки
+					TimeSpan taskStartTime = currentFreeTimeStart + delay;
+					TimeSpan taskEndTime = taskStartTime + taskDuration;
 
-					// Добавляем оставшееся свободное время после запланированной задачи
-					if (taskEndTime < freeTimeEnd)
+					// Проверяем, помещается ли задание в пределах границ и свободного времени
+					if (BorderStartTime <= taskStartTime && taskEndTime <= BorderEndTime && taskEndTime <= freeTimeEnd)
 					{
-						mergedTable.Rows.Add(russianDayOfWeek, $"{taskEndTime} - {freeTimeEnd}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);
-					}
+						int priority = Convert.ToInt32(taskRow["Priority"]);
 
-					return taskEndTime.ToString(); // Возвращаем время окончания вставленной задачи
+						// Добавляем начальный интервал свободного времени перед заданием
+						if (taskStartTime > currentFreeTimeStart) {
+							FreeTime += taskStartTime - currentFreeTimeStart;
+							mergedTable.Rows.Add(russianDayOfWeek, $"{currentFreeTimeStart} - {taskStartTime}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);
+						}
+
+						// Добавляем задание в расписание
+						BusyTime += taskEndTime - taskStartTime;
+						mergedTable.Rows.Add(russianDayOfWeek, $"{taskStartTime} - {taskEndTime}", "Mandatory", priority, taskRow.Field<string>("Title"), dayOfWeek);
+						tasksList.Remove(taskRow);  // Удаляем задачу, как только она будет запланирована
+
+						currentFreeTimeStart = taskEndTime; // Обновляем текущее время начала свободного интервала до окончания этого задания
+					}
 				}
 			}
-			mergedTable.Rows.Add(russianDayOfWeek, $"{freeTimeStart} - {freeTimeEnd}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);
-			return freeTimeStart.ToString(); // Возвращаем исходное время начала, если задача не была вставлена
+
+			// Добавляем оставшееся свободное время после запланированной задачи
+			if (currentFreeTimeStart < freeTimeEnd) {
+				FreeTime += freeTimeEnd - currentFreeTimeStart;
+				mergedTable.Rows.Add(russianDayOfWeek, $"{currentFreeTimeStart} - {freeTimeEnd}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);
+			}
+
+			return freeTimeEnd.ToString(); // Возвращаем время окончания свободного интервала
 		}
 		private string GetRussianDayOfWeek(int dayOfWeek)
 		{
@@ -219,15 +261,24 @@ namespace App
 		{
 			ScheduleForm form = new ScheduleForm();
 			form.ShowDialog();
+			LoadAndUpdateData();
 		}
 		private void CaseToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			CasesForm form = new CasesForm();
 			form.ShowDialog();
+			LoadAndUpdateData();
 		}
 		private void DelayToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			
+			DelayForm delayForm = new DelayForm(configFilePath);
+			delayForm.ShowDialog();
+			Delay = TimeSpan.Parse(File.ReadAllLines(configFilePath)[0]);
+			LoadAndUpdateData();
+		}
+		private void timer1_Tick(object sender, EventArgs e)
+		{
+			LoadAndUpdateData();
 		}
 	}
 }
