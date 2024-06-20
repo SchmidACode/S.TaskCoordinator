@@ -24,6 +24,12 @@ namespace ScheduleTaskCoordinator
 			dataGridView.ContextMenuStrip = contextMenuStrip1;
 			dataGridView.AllowUserToDeleteRows = false;
 
+			Icon icon = new Icon(SystemIcons.Question, btnQuestion.Height, btnQuestion.Width);
+			Bitmap bitmap = icon.ToBitmap();
+			btnQuestion.BackgroundImage = bitmap;
+			btnQuestion.BackgroundImageLayout = ImageLayout.Zoom;
+			btnQuestion.FlatAppearance.MouseOverBackColor = btnQuestion.BackColor;
+
 			this.KeyDown += new KeyEventHandler(Form1_KeyDown); this.KeyPreview = true;
 		}
 		private void LoadTable()

@@ -170,6 +170,8 @@
 			// 
 			// btnQuestion
 			// 
+			this.btnQuestion.FlatAppearance.BorderSize = 0;
+			this.btnQuestion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.btnQuestion.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
 			this.btnQuestion.Location = new System.Drawing.Point(513, 84);
 			this.btnQuestion.Margin = new System.Windows.Forms.Padding(1);

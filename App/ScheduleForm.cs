@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Data.SQLite;
 using System.Linq;
+using System.Drawing;
 
 namespace ScheduleTaskCoordinator
 {
@@ -27,6 +28,12 @@ namespace ScheduleTaskCoordinator
 			comboBox1.SelectedIndex = 1;
 			dataGridView1.ContextMenuStrip = contextMenuStrip1;
 			dataGridView1.AllowUserToDeleteRows = false;
+
+			Icon icon = new Icon(SystemIcons.Question, btnQuestion.Height, btnQuestion.Width);
+			Bitmap bitmap = icon.ToBitmap();
+			btnQuestion.BackgroundImage = bitmap;
+			btnQuestion.BackgroundImageLayout = ImageLayout.Zoom;
+			btnQuestion.FlatAppearance.MouseOverBackColor = btnQuestion.BackColor;
 
 			this.KeyDown += new KeyEventHandler(Form1_KeyDown); this.KeyPreview = true;
 		}

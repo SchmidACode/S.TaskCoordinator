@@ -50,6 +50,8 @@
 			// 
 			// btnQuestion
 			// 
+			this.btnQuestion.FlatAppearance.BorderSize = 0;
+			this.btnQuestion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.btnQuestion.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
 			this.btnQuestion.Location = new System.Drawing.Point(518, 37);
 			this.btnQuestion.Margin = new System.Windows.Forms.Padding(1);
@@ -96,15 +98,15 @@
 			this.lblTaskName.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
 			this.lblTaskName.Location = new System.Drawing.Point(255, 13);
 			this.lblTaskName.Name = "lblTaskName";
-			this.lblTaskName.Size = new System.Drawing.Size(95, 15);
+			this.lblTaskName.Size = new System.Drawing.Size(49, 15);
 			this.lblTaskName.TabIndex = 18;
-			this.lblTaskName.Text = "Название дела";
+			this.lblTaskName.Text = "Задача";
 			// 
 			// dateTimePicker
 			// 
 			this.dateTimePicker.CustomFormat = "yyyy/MM/dd   HH:mm";
 			this.dateTimePicker.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
-			this.dateTimePicker.Location = new System.Drawing.Point(111, 64);
+			this.dateTimePicker.Location = new System.Drawing.Point(158, 64);
 			this.dateTimePicker.Name = "dateTimePicker";
 			this.dateTimePicker.Size = new System.Drawing.Size(138, 20);
 			this.dateTimePicker.TabIndex = 17;
@@ -134,14 +136,14 @@
 			// numericUpDown
 			// 
 			this.numericUpDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.numericUpDown.Location = new System.Drawing.Point(340, 64);
+			this.numericUpDown.Location = new System.Drawing.Point(381, 64);
 			this.numericUpDown.Minimum = new decimal(new int[] {
             1,
             0,
             0,
             0});
 			this.numericUpDown.Name = "numericUpDown";
-			this.numericUpDown.Size = new System.Drawing.Size(93, 20);
+			this.numericUpDown.Size = new System.Drawing.Size(52, 20);
 			this.numericUpDown.TabIndex = 23;
 			this.numericUpDown.Value = new decimal(new int[] {
             1,
@@ -154,7 +156,7 @@
 			// 
 			this.lblPriority.AutoSize = true;
 			this.lblPriority.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.lblPriority.Location = new System.Drawing.Point(259, 64);
+			this.lblPriority.Location = new System.Drawing.Point(305, 65);
 			this.lblPriority.Name = "lblPriority";
 			this.lblPriority.Size = new System.Drawing.Size(75, 15);
 			this.lblPriority.TabIndex = 24;
@@ -213,6 +215,7 @@
 			this.Controls.Add(this.dataGridView);
 			this.Controls.Add(this.richTextBox);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+			this.HelpButton = true;
 			this.MaximizeBox = false;
 			this.Name = "CasesForm";
 			this.ShowIcon = false;
