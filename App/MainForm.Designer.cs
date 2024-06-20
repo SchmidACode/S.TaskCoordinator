@@ -1,4 +1,4 @@
-﻿namespace App
+﻿namespace ScheduleTaskCoordinator
 {
 	partial class MainForm
 	{
@@ -39,6 +39,7 @@
 			this.timer1 = new System.Windows.Forms.Timer(this.components);
 			this.labelFreeTime = new System.Windows.Forms.Label();
 			this.labelBusyTime = new System.Windows.Forms.Label();
+			this.label1 = new System.Windows.Forms.Label();
 			this.menuStrip1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
 			this.SuspendLayout();
@@ -129,12 +130,24 @@
 			this.labelBusyTime.TabIndex = 3;
 			this.labelBusyTime.Text = "Время отведенное \r\nна занятия:\r\n\r\n";
 			// 
+			// label1
+			// 
+			this.label1.AutoSize = true;
+			this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+			this.label1.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
+			this.label1.Location = new System.Drawing.Point(451, 236);
+			this.label1.Name = "label1";
+			this.label1.Size = new System.Drawing.Size(133, 30);
+			this.label1.TabIndex = 4;
+			this.label1.Text = "Время до истечения\r\nближайшего задания:";
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.SystemColors.InfoText;
 			this.ClientSize = new System.Drawing.Size(595, 450);
+			this.Controls.Add(this.label1);
 			this.Controls.Add(this.labelBusyTime);
 			this.Controls.Add(this.labelFreeTime);
 			this.Controls.Add(this.dataGridView1);
@@ -142,7 +155,8 @@
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.MainMenuStrip = this.menuStrip1;
 			this.Name = "MainForm";
-			this.Text = "Task Coordinator";
+			this.ShowIcon = false;
+			this.Text = "  Schedule Task Coordinator";
 			this.menuStrip1.ResumeLayout(false);
 			this.menuStrip1.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
@@ -162,6 +176,7 @@
 		private System.Windows.Forms.Timer timer1;
 		private System.Windows.Forms.Label labelFreeTime;
 		private System.Windows.Forms.Label labelBusyTime;
+		private System.Windows.Forms.Label label1;
 	}
 }
 

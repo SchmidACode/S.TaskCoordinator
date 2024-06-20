@@ -1,4 +1,4 @@
-﻿namespace App
+﻿namespace ScheduleTaskCoordinator
 {
 	partial class WelcomeForm
 	{
@@ -68,7 +68,7 @@
 			this.ShowIcon = false;
 			this.Text = "WelcomeForm";
 			this.TopMost = true;
-			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.WelcomeForm_FormClosed);
+			//this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.WelcomeForm_FormClosed);
 			this.panel1.ResumeLayout(false);
 			this.ResumeLayout(false);
 

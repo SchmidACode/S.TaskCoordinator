@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace App
+namespace ScheduleTaskCoordinator
 {
 	public partial class CasesForm : Form
 	{
@@ -19,8 +19,10 @@ namespace App
 			InitializeComponent();
 			connector = new Connector();
 
+			dateTimePicker.Value = DateTime.Now.Date;
 			LoadTable();
 			dataGridView.ContextMenuStrip = contextMenuStrip1;
+			dataGridView.AllowUserToDeleteRows = false;
 
 			this.KeyDown += new KeyEventHandler(Form1_KeyDown); this.KeyPreview = true;
 		}
@@ -52,7 +54,10 @@ ORDER BY DueDate ASC";
 			DateTime dueDate = dateTimePicker.Value;
 			string title = richTextBox.Text;
 			short priority = Convert.ToInt16(numericUpDown.Value);
-
+			if (time == TimeSpan.Zero) {
+				MessageBox.Show("Пожалуйста, введите время для задания.", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
 			connector.InsertDataToBase("Tasks", "Title, CompleteTime, DueDate, Priority", $"'{title}', '{time}', '{dueDate}', {priority}");
 			LoadTable();
 		}
@@ -61,6 +66,7 @@ ORDER BY DueDate ASC";
 			if (dataGridView.SelectedRows.Count > 0)
 			{
 				DataGridViewRow selectedRow = dataGridView.SelectedRows[0];
+				if (selectedRow.Cells["Id"].Value == DBNull.Value) return;
 				int ID = Convert.ToInt32(selectedRow.Cells["Id"].Value);
 				connector.DeleteDataFromBase("Tasks", ID);
 
@@ -100,6 +106,18 @@ ORDER BY DueDate ASC";
 		{
 				this.DialogResult = DialogResult.OK;
 				this.Close();
+		}
+		private void numericUpDown_ValueChanged(object sender, EventArgs e)
+		{
+			if (numericUpDown.Value > 100) numericUpDown.Value = 100;
+			if (numericUpDown.Value < 0) numericUpDown.Value = 0;
+		}
+		private void btnQuestion_Click(object sender, EventArgs e)
+		{
+			string str = @"Здесь нужно добавлять дела, которые нужно сделать до определенной даты. 
+
+Остальные задачи, которые выполняются ежедневно, должны находиться в другой таблице!";
+			MessageBox.Show(str, "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
 	}
 }

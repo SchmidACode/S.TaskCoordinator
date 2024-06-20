@@ -1,4 +1,4 @@
-﻿namespace App
+﻿namespace ScheduleTaskCoordinator
 {
 	partial class ScheduleForm
 	{
@@ -198,6 +198,7 @@
 			this.Controls.Add(this.lblDayOfTheWeek);
 			this.Controls.Add(this.comboBox1);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+			this.MaximizeBox = false;
 			this.Name = "ScheduleForm";
 			this.ShowIcon = false;
 			this.Text = "Редактирование расписания";

@@ -1,4 +1,4 @@
-﻿namespace App
+﻿namespace ScheduleTaskCoordinator
 {
 	partial class DelayForm
 	{

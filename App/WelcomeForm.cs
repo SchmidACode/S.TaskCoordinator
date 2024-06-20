@@ -13,11 +13,11 @@ using System.IO;
 using System.Data.SqlClient;
 using System.Reflection.Emit;
 
-namespace App
+namespace ScheduleTaskCoordinator
 {
 	public partial class WelcomeForm : Form
 	{
-		private string databasePath = "MyApp.db";
+		private string databasePath = "ScheduleTaskCoordinator.db";
 		private string configFilePath = "config.cfg";
 		private Timer closeTimer;
 		public WelcomeForm()
@@ -32,20 +32,24 @@ namespace App
 
 			this.StartPosition = FormStartPosition.CenterScreen;
 			labelInformation.Location = new System.Drawing.Point(panelCenterX - labelWidth / 2, panelCenterY - labelHeight / 2);
-			if (CheckAndCreateDatabase() == true) StartCloseTimer();
-
-
+			CheckAndCreateDatabase();
+			StartCloseTimer();
 		}
-
 		private bool CheckAndCreateDatabase()
 		{
 			try {
 				if (!File.Exists(databasePath) || !File.Exists(configFilePath))
 				{
-					SQLiteConnection.CreateFile(databasePath);
-					using (var connection = new SQLiteConnection($"Data Source={databasePath};Version=3")) {
-						connection.Open();
-						CreateTables(connection);
+					if (!File.Exists(databasePath)) {
+						SQLiteConnection.CreateFile(databasePath);
+						using (var connection = new SQLiteConnection($"Data Source={databasePath};Version=3"))
+						{
+							connection.Open();
+							CreateTables(connection);
+						}
+					}
+					if (!File.Exists(configFilePath)) {
+						File.WriteAllText(configFilePath, "00:20:00\n00:00:00\n23:59:59");
 					}
 
 					if (File.Exists(databasePath)) {
@@ -84,14 +88,14 @@ namespace App
             Title TEXT NOT NULL,
 			CompleteTime TEXT NOT NULL,
             DueDate TEXT NOT NULL,
-            Priority INTEGER NOT NULL
+            Priority INTEGER NOT NULL,
+			DelayTime TEXT
 			)";
 			using (var command = new SQLiteCommand(createScheduleTableQuery, connection))
 				command.ExecuteNonQuery();
 
 			using (var command = new SQLiteCommand(createTasksTableQuery, connection))
 				command.ExecuteNonQuery();
-			File.WriteAllText(configFilePath, "00:20:00\n00:00:00\n23:59:59");
 		}
 		private void StartCloseTimer()
 		{
@@ -103,12 +107,9 @@ namespace App
 		private void CloseTimer_Tick(object sender, EventArgs e)
 		{
 			closeTimer.Stop();
-			this.DialogResult = DialogResult.OK;
+			if(CheckAndCreateDatabase())
+				this.DialogResult = DialogResult.OK;
 			this.Close();
-		}
-		private void WelcomeForm_FormClosed(object sender, FormClosedEventArgs e)
-		{
-			this.DialogResult = DialogResult.OK;
 		}
 	}
 }

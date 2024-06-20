@@ -1,4 +1,4 @@
-﻿using App;
+﻿using ScheduleTaskCoordinator;
 using System;
 using System.Windows.Forms;
 using System.Data.SQLite;
@@ -43,7 +43,7 @@ namespace WindowsFormsApp
 
 		static bool IsConditionMet()
 		{
-			App.Connector con = new App.Connector();
+			ScheduleTaskCoordinator.Connector con = new ScheduleTaskCoordinator.Connector();
 			return con.IsExists("Schedule"); 
 		}
 	}

@@ -1,4 +1,4 @@
-﻿namespace App
+﻿namespace ScheduleTaskCoordinator
 {
 	partial class CasesForm
 	{
@@ -57,6 +57,7 @@
 			this.btnQuestion.Size = new System.Drawing.Size(30, 30);
 			this.btnQuestion.TabIndex = 22;
 			this.btnQuestion.UseVisualStyleBackColor = true;
+			this.btnQuestion.Click += new System.EventHandler(this.btnQuestion_Click);
 			// 
 			// btnOK
 			// 
@@ -147,6 +148,7 @@
             0,
             0,
             0});
+			this.numericUpDown.ValueChanged += new System.EventHandler(this.numericUpDown_ValueChanged);
 			// 
 			// lblPriority
 			// 
@@ -211,6 +213,7 @@
 			this.Controls.Add(this.dataGridView);
 			this.Controls.Add(this.richTextBox);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+			this.MaximizeBox = false;
 			this.Name = "CasesForm";
 			this.ShowIcon = false;
 			this.Text = "Редактирование дел";

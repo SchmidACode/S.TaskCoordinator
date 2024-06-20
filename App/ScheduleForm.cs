@@ -5,7 +5,7 @@ using System.Windows.Forms;
 using System.Data.SQLite;
 using System.Linq;
 
-namespace App
+namespace ScheduleTaskCoordinator
 {
 	public partial class ScheduleForm : Form
 	{
@@ -26,6 +26,7 @@ namespace App
 			}
 			comboBox1.SelectedIndex = 1;
 			dataGridView1.ContextMenuStrip = contextMenuStrip1;
+			dataGridView1.AllowUserToDeleteRows = false;
 
 			this.KeyDown += new KeyEventHandler(Form1_KeyDown); this.KeyPreview = true;
 		}
@@ -81,14 +82,28 @@ namespace App
 				return;
 			}
 
+			DataTable scheduleData = connector.LoadSortedDataFromDB("SELECT * FROM Schedule");
+			foreach (DataRow row in scheduleData.Rows)
+			{
+				int dayOfWeek = Convert.ToInt32(row["DayOfWeek"]);
+				TimeSpan existingStart = TimeSpan.Parse(row["StartTime"].ToString());
+				TimeSpan existingEnd = TimeSpan.Parse(row["EndTime"].ToString());
+
+				if (dayOfWeek == (int)day && !(end <= existingStart || start >= existingEnd))
+				{
+					MessageBox.Show("Расписание пересекается с существующим элементом.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					return;
+				}
+			}
 			connector.InsertDataToBase("Schedule", "Plan, DayOfWeek, StartTime, EndTime", $"'{plan}', {(int)day}, '{start}', '{end}'");
 			LoadTable();
 		}
 		private void DeleteSelectedRow()
 		{
-			if (dataGridView1.SelectedRows.Count > 0)
+			if (dataGridView1.SelectedRows.Count > 0 )
 			{
 				DataGridViewRow selectedRow = dataGridView1.SelectedRows[0];
+				if (selectedRow.Cells["Id"].Value == DBNull.Value) return;
 				int ID = Convert.ToInt32(selectedRow.Cells["Id"].Value);
 				connector.DeleteDataFromBase("Schedule", ID);
 				foreach (DataGridViewRow row in dataGridView1.SelectedRows)
@@ -103,17 +118,8 @@ namespace App
 		}
 		private string GetRussianDayOfWeek(int dayOfWeek)
 		{
-			switch ((DayOfWeek)dayOfWeek)
-			{
-				case DayOfWeek.Sunday: return "Воскресенье";
-				case DayOfWeek.Monday: return "Понедельник";
-				case DayOfWeek.Tuesday: return "Вторник";
-				case DayOfWeek.Wednesday: return "Среда";
-				case DayOfWeek.Thursday: return "Четверг";
-				case DayOfWeek.Friday: return "Пятница";
-				case DayOfWeek.Saturday: return "Суббота";
-				default: return "";
-			}
+			string[] russianDays = { "Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота" };
+			return russianDays[dayOfWeek % 7];
 		}
 		private void btnAdd_Click(object sender, EventArgs e)
 		{
