@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.IO;
 using ScheduleTaskCoordinator;
 using TaskCoordinator.Properties;
+using static System.Data.Entity.Infrastructure.Design.Executor;
 
 namespace ScheduleTaskCoordinator
 {
@@ -247,55 +248,59 @@ namespace ScheduleTaskCoordinator
 				TimeSpan taskDuration = TimeSpan.Parse(taskRow["CompleteTime"].ToString());
 				DateTime dueDate = DateTime.Parse(taskRow["DueDate"].ToString());
 
-				if (dueDate > DateTime.Now + taskDuration) // Проверяем, не просрочено ли задание
+				if (dueDate > DateTime.Now.AddDays((dayOfWeek - (int)DateTime.Now.DayOfWeek + 7) % 7) && dueDate >= DateTime.Now)
 				{
-					TimeSpan taskDelay = TimeSpan.Zero;
-					if (taskRow["DelayTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["DelayTime"].ToString()))
+					if (dueDate > DateTime.Now + taskDuration) // Проверяем, не просрочено ли задание
 					{
-						taskDelay = TimeSpan.Parse(taskRow["DelayTime"].ToString());
-					}
-
-					// Рассчитываем время начала и окончания задания с учетом задержки и задержки при необходимости
-					TimeSpan taskStartTime = currentFreeTimeStart + delay + taskDelay;
-					TimeSpan taskEndTime = taskStartTime + taskDuration;
-
-					// Если задача не помещается в границы времени, переносим на границу + задержка
-					if (taskStartTime < BorderStartTime)
-					{
-						taskStartTime = BorderStartTime + taskDelay; // Учитываем задержку
-						taskEndTime = taskStartTime + taskDuration;
-					}
-					else if (taskEndTime > BorderEndTime)
-					{
-						continue; // Если задача не помещается в границы времени, пропускаем ее
-					}
-
-					// Проверяем, помещается ли задание в свободное время с учетом задержки между задачами
-					if (taskEndTime <= freeTimeEnd)
-					{
-						int priority = Convert.ToInt32(taskRow["Priority"]);
-
-						// Проверяем, достаточно ли свободного времени между заданиями
-						if (currentFreeTimeStart + delay <= taskStartTime)
+						TimeSpan taskDelay = TimeSpan.Zero;
+						if (taskRow["DelayTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["DelayTime"].ToString()))
 						{
-							// Добавляем начальный интервал свободного времени перед заданием
-							if (taskStartTime > currentFreeTimeStart)
-							{
-								FreeTime += taskStartTime - currentFreeTimeStart;
-								mergedTable.Rows.Add(russianDayOfWeek, $"{currentFreeTimeStart} - {taskStartTime}", "Free", DBNull.Value, DBNull.Value, dayOfWeek, DBNull.Value);
-							}
-
-							// Добавляем задание в расписание
-							BusyTime += taskEndTime - taskStartTime;
-							mergedTable.Rows.Add(russianDayOfWeek, $"{taskStartTime} - {taskEndTime}", "Mandatory", priority, taskRow.Field<string>("Title"), dayOfWeek, taskRow["Id"]);
-							Deadline.Add(DateTime.Parse(taskRow["DueDate"].ToString()), taskRow["Title"].ToString());
-
-							// Удаляем задачу, как только она будет запланирована
-							tasksList.Remove(taskRow);
-							currentFreeTimeStart = taskEndTime; // Обновляем текущее время начала свободного интервала до окончания этого задания
+							taskDelay = TimeSpan.Parse(taskRow["DelayTime"].ToString());
 						}
-						else {
-							continue;
+
+						// Рассчитываем время начала и окончания задания с учетом задержки и задержки при необходимости
+						TimeSpan taskStartTime = currentFreeTimeStart + delay + taskDelay;
+						TimeSpan taskEndTime = taskStartTime + taskDuration;
+
+						// Если задача не помещается в границы времени, переносим на границу + задержка
+						if (taskStartTime < BorderStartTime)
+						{
+							taskStartTime = BorderStartTime + taskDelay; // Учитываем задержку
+							taskEndTime = taskStartTime + taskDuration;
+						}
+						if (taskEndTime > BorderEndTime)
+						{
+							continue; // Если задача не помещается в границы времени, пропускаем ее
+						}
+
+						// Проверяем, помещается ли задание в свободное время с учетом задержки между задачами
+						if (taskEndTime <= freeTimeEnd)
+						{
+							int priority = Convert.ToInt32(taskRow["Priority"]);
+
+							// Проверяем, достаточно ли свободного времени между заданиями
+							if (currentFreeTimeStart + delay <= taskStartTime)
+							{
+								// Добавляем начальный интервал свободного времени перед заданием
+								if (taskStartTime > currentFreeTimeStart)
+								{
+									FreeTime += taskStartTime - currentFreeTimeStart;
+									mergedTable.Rows.Add(russianDayOfWeek, $"{currentFreeTimeStart} - {taskStartTime}", "Free", DBNull.Value, DBNull.Value, dayOfWeek, DBNull.Value);
+								}
+
+								// Добавляем задание в расписание
+								BusyTime += taskEndTime - taskStartTime;
+								mergedTable.Rows.Add(russianDayOfWeek, $"{taskStartTime} - {taskEndTime}", "Mandatory", priority, taskRow.Field<string>("Title"), dayOfWeek, taskRow["Id"]);
+								Deadline.Add(DateTime.Parse(taskRow["DueDate"].ToString()), taskRow["Title"].ToString());
+
+								// Удаляем задачу, как только она будет запланирована
+								tasksList.Remove(taskRow);
+								currentFreeTimeStart = taskEndTime; // Обновляем текущее время начала свободного интервала до окончания этого задания
+							}
+							else
+							{
+								continue;
+							}
 						}
 					}
 				}

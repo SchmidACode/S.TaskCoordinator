@@ -83,9 +83,9 @@ namespace ScheduleTaskCoordinator
 			DayOfWeek day = (DayOfWeek)comboBox1.SelectedIndex;
 			TimeSpan start = dateStartTime.Value.TimeOfDay;
 			TimeSpan end = dateEndTime.Value.TimeOfDay;
-			if (start >= end.Add(TimeSpan.FromSeconds(30)))
+			if (start + TimeSpan.FromMinutes(5) > end)
 			{
-				MessageBox.Show("Время окончания должно быть позже времени начала как минимум на 30 сек.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MessageBox.Show("Время окончания должно быть позже времени начала как минимум на 5 минут.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return;
 			}
 

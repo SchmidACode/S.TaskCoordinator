@@ -53,7 +53,7 @@
 			this.btnQuestion.FlatAppearance.BorderSize = 0;
 			this.btnQuestion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.btnQuestion.ImageAlign = System.Drawing.ContentAlignment.TopLeft;
-			this.btnQuestion.Location = new System.Drawing.Point(518, 37);
+			this.btnQuestion.Location = new System.Drawing.Point(371, 9);
 			this.btnQuestion.Margin = new System.Windows.Forms.Padding(1);
 			this.btnQuestion.Name = "btnQuestion";
 			this.btnQuestion.Size = new System.Drawing.Size(30, 30);
@@ -64,7 +64,7 @@
 			// btnOK
 			// 
 			this.btnOK.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.btnOK.Location = new System.Drawing.Point(473, 10);
+			this.btnOK.Location = new System.Drawing.Point(411, 36);
 			this.btnOK.Name = "btnOK";
 			this.btnOK.Size = new System.Drawing.Size(75, 23);
 			this.btnOK.TabIndex = 21;
@@ -74,7 +74,7 @@
 			// 
 			// btnAdd
 			// 
-			this.btnAdd.Location = new System.Drawing.Point(356, 10);
+			this.btnAdd.Location = new System.Drawing.Point(411, 9);
 			this.btnAdd.Name = "btnAdd";
 			this.btnAdd.Size = new System.Drawing.Size(75, 23);
 			this.btnAdd.TabIndex = 20;
@@ -121,7 +121,7 @@
 			this.dataGridView.Name = "dataGridView";
 			this.dataGridView.ReadOnly = true;
 			this.dataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.dataGridView.Size = new System.Drawing.Size(536, 291);
+			this.dataGridView.Size = new System.Drawing.Size(474, 291);
 			this.dataGridView.TabIndex = 16;
 			this.dataGridView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.dataGridView1_KeyDown);
 			// 
@@ -136,7 +136,7 @@
 			// numericUpDown
 			// 
 			this.numericUpDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.numericUpDown.Location = new System.Drawing.Point(381, 64);
+			this.numericUpDown.Location = new System.Drawing.Point(434, 64);
 			this.numericUpDown.Minimum = new decimal(new int[] {
             1,
             0,
@@ -156,7 +156,7 @@
 			// 
 			this.lblPriority.AutoSize = true;
 			this.lblPriority.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-			this.lblPriority.Location = new System.Drawing.Point(305, 65);
+			this.lblPriority.Location = new System.Drawing.Point(353, 66);
 			this.lblPriority.Name = "lblPriority";
 			this.lblPriority.Size = new System.Drawing.Size(75, 15);
 			this.lblPriority.TabIndex = 24;
@@ -201,7 +201,7 @@
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(562, 388);
+			this.ClientSize = new System.Drawing.Size(503, 388);
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.dateTimePicker1);
 			this.Controls.Add(this.lblPriority);
