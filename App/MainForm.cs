@@ -7,12 +7,12 @@ using System.Linq;
 using System.Windows.Forms;
 using System.IO;
 using ScheduleTaskCoordinator;
+using TaskCoordinator.Properties;
 
 namespace ScheduleTaskCoordinator
 {
 	public partial class MainForm : Form
 	{
-		private string configFilePath = "config.cfg";
 		private Connector connector;
 		private TimeSpan Delay;
 		private TimeSpan FreeTime, BusyTime;
@@ -24,7 +24,7 @@ namespace ScheduleTaskCoordinator
 		{
 			InitializeComponent();
 
-			Delay = TimeSpan.Parse(File.ReadAllLines(configFilePath)[0]);
+			Delay = Settings.Default.DelayTime;
 			connector = new Connector();
 
 			dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
@@ -48,13 +48,21 @@ namespace ScheduleTaskCoordinator
 
 			//MessageBox.Show($"{TimeSpan.FromMilliseconds(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds)}");
 			timer1.Interval = Convert.ToInt32(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds);
+			if (Settings.Default.LastOnlineTime != DateTime.MinValue)
+			{
+				if (Settings.Default.LastOnlineTime.AddDays(1) <= DateTime.Now)
+				{
+					DeleteExpiredTasks();
+				}
+			}
 		}
 		private void DeleteExpiredTasks()
 		{
 			try
 			{
-				DateTime oneDayAgo = DateTime.Now.AddDays(-1);
-				string deleteQuery = $"DELETE FROM Tasks WHERE DueDate <= '{oneDayAgo.ToString("yyyy-MM-dd HH:mm:ss")}'";
+				DateTime lastOnlineTime = Settings.Default.LastOnlineTime;
+
+				string deleteQuery = $"DELETE FROM Tasks WHERE DueDate <= '{lastOnlineTime.ToString("yyyy-MM-dd HH:mm:ss")}'";
 				connector.ExecuteQuery(deleteQuery);
 				LoadAndUpdateData();
 			}
@@ -225,9 +233,8 @@ namespace ScheduleTaskCoordinator
 		private string InsertTasksIntoFreeTime(DataTable mergedTable, List<DataRow> tasksList, string russianDayOfWeek, int dayOfWeek, TimeSpan freeTimeStart, TimeSpan freeTimeEnd, TimeSpan delay)
 		{
 			// Чтение config файла
-			string[] configLines = File.ReadAllLines(configFilePath);
-			TimeSpan BorderStartTime = TimeSpan.Parse(configLines[1]);
-			TimeSpan BorderEndTime = TimeSpan.Parse(configLines[2]);
+			TimeSpan BorderStartTime = Settings.Default.BorderStartTime;
+			TimeSpan BorderEndTime = Settings.Default.BorderEndTime;
 
 			TimeSpan currentFreeTimeStart = freeTimeStart;
 
@@ -376,10 +383,19 @@ namespace ScheduleTaskCoordinator
 		}
 		private void DelayToolStripMenuItem_Click(object sender, EventArgs e)
 		{
-			DelayForm delayForm = new DelayForm(configFilePath);
+			DelayForm delayForm = new DelayForm();
 			delayForm.ShowDialog();
-			Delay = TimeSpan.Parse(File.ReadAllLines(configFilePath)[0]);
 			LoadAndUpdateData();
+		}
+		private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
+		{
+			Settings.Default.LastOnlineTime = DateTime.Now;
+			Settings.Default.Save();
+		}
+		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+		{
+			Settings.Default.LastOnlineTime = DateTime.Now;
+			Settings.Default.Save();
 		}
 		private void timer1_Tick(object sender, EventArgs e)
 		{

@@ -18,7 +18,6 @@ namespace ScheduleTaskCoordinator
 	public partial class WelcomeForm : Form
 	{
 		private string databasePath = "ScheduleTaskCoordinator.db";
-		private string configFilePath = "config.cfg";
 		private Timer closeTimer;
 		public WelcomeForm()
 		{
@@ -38,7 +37,7 @@ namespace ScheduleTaskCoordinator
 		private bool CheckAndCreateDatabase()
 		{
 			try {
-				if (!File.Exists(databasePath) || !File.Exists(configFilePath))
+				if (!File.Exists(databasePath))
 				{
 					if (!File.Exists(databasePath)) {
 						SQLiteConnection.CreateFile(databasePath);
@@ -48,10 +47,6 @@ namespace ScheduleTaskCoordinator
 							CreateTables(connection);
 						}
 					}
-					if (!File.Exists(configFilePath)) {
-						File.WriteAllText(configFilePath, "00:20:00\n00:00:00\n23:59:59");
-					}
-
 					if (File.Exists(databasePath)) {
 						labelInformation.Text = $"База данных успешно создана по пути {Path.Combine(Directory.GetCurrentDirectory(), databasePath)}";
 						return true;

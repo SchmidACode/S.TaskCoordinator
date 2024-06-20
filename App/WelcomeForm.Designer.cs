@@ -28,15 +28,20 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			this.labelInformation = new System.Windows.Forms.Label();
 			this.panel1 = new System.Windows.Forms.Panel();
+			this.errorProvider1 = new System.Windows.Forms.ErrorProvider(this.components);
 			this.panel1.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.errorProvider1)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// labelInformation
 			// 
 			this.labelInformation.Anchor = System.Windows.Forms.AnchorStyles.None;
-			this.labelInformation.Location = new System.Drawing.Point(3, 95);
+			this.labelInformation.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
+			this.labelInformation.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
+			this.labelInformation.Location = new System.Drawing.Point(3, 56);
 			this.labelInformation.Name = "labelInformation";
 			this.labelInformation.Size = new System.Drawing.Size(414, 109);
 			this.labelInformation.TabIndex = 0;
@@ -45,13 +50,17 @@
 			// 
 			// panel1
 			// 
-			this.panel1.BackColor = System.Drawing.SystemColors.AppWorkspace;
+			this.panel1.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
 			this.panel1.Controls.Add(this.labelInformation);
 			this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.panel1.Location = new System.Drawing.Point(0, 0);
 			this.panel1.Name = "panel1";
 			this.panel1.Size = new System.Drawing.Size(420, 213);
 			this.panel1.TabIndex = 1;
+			// 
+			// errorProvider1
+			// 
+			this.errorProvider1.ContainerControl = this;
 			// 
 			// WelcomeForm
 			// 
@@ -66,10 +75,9 @@
 			this.MinimizeBox = false;
 			this.Name = "WelcomeForm";
 			this.ShowIcon = false;
-			this.Text = "WelcomeForm";
 			this.TopMost = true;
-			//this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.WelcomeForm_FormClosed);
 			this.panel1.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.errorProvider1)).EndInit();
 			this.ResumeLayout(false);
 
 		}
@@ -78,5 +86,6 @@
 
 		private System.Windows.Forms.Label labelInformation;
 		private System.Windows.Forms.Panel panel1;
+		private System.Windows.Forms.ErrorProvider errorProvider1;
 	}
 }

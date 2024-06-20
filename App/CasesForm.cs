@@ -19,7 +19,7 @@ namespace ScheduleTaskCoordinator
 			InitializeComponent();
 			connector = new Connector();
 
-			dateTimePicker.Value = DateTime.Now.Date;
+			dateTimePicker.Value = DateTime.Now.Date.AddDays(1);
 			LoadTable();
 			dataGridView.ContextMenuStrip = contextMenuStrip1;
 			dataGridView.AllowUserToDeleteRows = false;
@@ -40,6 +40,7 @@ ORDER BY DueDate ASC";
 
 				dataGridView.Columns["Title"].HeaderText = "Дела";
 				dataGridView.Columns["Id"].Visible = false;
+				dataGridView.Columns["DelayTime"].Visible = false;
 				dataGridView.Columns["CompleteTime"].HeaderText = "Время на выполение";
 				dataGridView.Columns["DueDate"].HeaderText = "Последний срок";
 				dataGridView.Columns["Priority"].HeaderText = "Приоритет";
