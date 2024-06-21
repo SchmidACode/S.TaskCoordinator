@@ -45,8 +45,10 @@ ORDER BY DueDate ASC";
 				dataGridView.DataSource = dataTable;
 
 				dataGridView.Columns["Title"].HeaderText = "Дела";
-				dataGridView.Columns["Id"].Visible = false;
+				dataGridView.Columns["Id"].Visible = true;
 				dataGridView.Columns["DelayTime"].Visible = false;
+				dataGridView.Columns["StartTime"].Visible = false;
+				dataGridView.Columns["EndTime"].Visible = false;
 				dataGridView.Columns["CompleteTime"].HeaderText = "Время на выполение";
 				dataGridView.Columns["DueDate"].HeaderText = "Последний срок";
 				dataGridView.Columns["Priority"].HeaderText = "Приоритет";
@@ -111,8 +113,7 @@ ORDER BY DueDate ASC";
 		}
 		private void btnOK_Click(object sender, EventArgs e)
 		{
-				this.DialogResult = DialogResult.OK;
-				this.Close();
+			this.Close();
 		}
 		private void numericUpDown_ValueChanged(object sender, EventArgs e)
 		{

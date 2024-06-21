@@ -9,6 +9,8 @@ using System.IO;
 using ScheduleTaskCoordinator;
 using TaskCoordinator.Properties;
 using static System.Data.Entity.Infrastructure.Design.Executor;
+using TaskCoordinator;
+using System.Threading.Tasks;
 
 namespace ScheduleTaskCoordinator
 {
@@ -17,7 +19,7 @@ namespace ScheduleTaskCoordinator
 		private Connector connector;
 		private TimeSpan Delay;
 		private TimeSpan FreeTime, BusyTime;
-		private Dictionary<DateTime, string> Deadline = new Dictionary<DateTime, string>();
+		private Dictionary<TaskKey, string> Deadline = new Dictionary<TaskKey, string>();
 
 		private ContextMenuStrip contextMenuStrip;
 		private DataGridViewRow selectedRow;
@@ -40,9 +42,9 @@ namespace ScheduleTaskCoordinator
 			// contextmenustrip
 			contextMenuStrip = new ContextMenuStrip();
 			var postponeMenuItem = new ToolStripMenuItem("Отложить задание", null, PostponeMenuItem_Click);
-			//var deleteMenuItem = new ToolStripMenuItem("Удалить задание", null, DeleteMenuItem_Click);
+			var BorderTaskMenuItem = new ToolStripMenuItem("Ограничить задание", null, BorderTaskMenuItem_Click);
 			contextMenuStrip.Items.Add(postponeMenuItem);
-			//contextMenuStrip.Items.Add(deleteMenuItem);
+			contextMenuStrip.Items.Add(BorderTaskMenuItem);
 
 			dataGridView1.MouseDown += DataGridView1_MouseDown;
 			dataGridView1.ContextMenuStrip = contextMenuStrip;
@@ -89,12 +91,13 @@ namespace ScheduleTaskCoordinator
 
 				foreach (var entry in Deadline)
 				{
-					if (entry.Key > DateTime.Now && entry.Key < nearestDeadline)
+					if (entry.Key.DueDate > DateTime.Now && entry.Key.DueDate < nearestDeadline)
 					{
-						nearestDeadline = entry.Key;
+						nearestDeadline = entry.Key.DueDate;
 						nearestDeadlineTask = entry.Value;
 					}
 				}
+
 
 				labelFreeTime.Text = $"Свободное время:\n{FreeTime}";
 				labelBusyTime.Text = $"Время отведенное\nна занятия:\n{BusyTime}";
@@ -273,6 +276,11 @@ namespace ScheduleTaskCoordinator
 							continue; // Если задача не помещается в границы времени, пропускаем ее
 						}
 
+						// Проверяем, может ли задание войти в заданные границы и есть ли границы вообще
+						if (taskRow["StartTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["StartTime"].ToString()) && taskRow["EndTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["EndTime"].ToString()))
+							if (!(TimeSpan.Parse(taskRow.Field<string>("StartTime")) <= taskStartTime && TimeSpan.Parse(taskRow.Field<string>("EndTime")) >= taskEndTime))
+								continue;
+
 						// Проверяем, помещается ли задание в свободное время с учетом задержки между задачами
 						if (taskEndTime <= freeTimeEnd)
 						{
@@ -291,7 +299,8 @@ namespace ScheduleTaskCoordinator
 								// Добавляем задание в расписание
 								BusyTime += taskEndTime - taskStartTime;
 								mergedTable.Rows.Add(russianDayOfWeek, $"{taskStartTime} - {taskEndTime}", "Mandatory", priority, taskRow.Field<string>("Title"), dayOfWeek, taskRow["Id"]);
-								Deadline.Add(DateTime.Parse(taskRow["DueDate"].ToString()), taskRow["Title"].ToString());
+								TaskKey taskKey = new TaskKey(DateTime.Parse(taskRow["DueDate"].ToString()), Convert.ToInt32(taskRow["Id"]));
+								Deadline[taskKey] = taskRow["Title"].ToString();
 
 								// Удаляем задачу, как только она будет запланирована
 								tasksList.Remove(taskRow);
@@ -354,6 +363,23 @@ namespace ScheduleTaskCoordinator
 				}
 			}
 		}
+		private void BorderTaskMenuItem_Click(object sender, EventArgs e) 
+		{
+			if (selectedRow != null)
+			{
+				string taskType = selectedRow.Cells["Type"].Value.ToString();
+				if (taskType == "Mandatory")
+				{
+					BorderTaskForm borderTaskForm = new BorderTaskForm((int)selectedRow.Cells["TaskId"].Value);
+					borderTaskForm.ShowDialog();
+					LoadAndUpdateData();
+				}
+				else
+				{
+					MessageBox.Show("Можно ограничивать только обязательные задания.");
+				}
+			}
+		}
 		private void DataGridView1_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
 		{
 			DataGridViewColumn clickedColumn = dataGridView1.Columns[e.ColumnIndex];
@@ -406,6 +432,29 @@ namespace ScheduleTaskCoordinator
 		{
 			DeleteExpiredTasks();
 			timer1.Interval = 24 * 60 * 60 * 1000;
+		}
+		public struct TaskKey
+		{
+			public DateTime DueDate { get; }
+			public int TaskId { get; }
+			public TaskKey(DateTime dueDate, int taskId)
+			{
+				DueDate = dueDate;
+				TaskId = taskId;
+			}
+			public override bool Equals(object obj)
+			{
+				if (obj is TaskKey)
+				{
+					TaskKey key = (TaskKey)obj;
+					return DueDate == key.DueDate && TaskId == key.TaskId;
+				}
+				return false;
+			}
+			public override int GetHashCode()
+			{
+				return DueDate.GetHashCode() ^ TaskId.GetHashCode();
+			}
 		}
 	}
 }

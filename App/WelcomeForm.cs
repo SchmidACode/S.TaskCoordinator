@@ -79,12 +79,14 @@ namespace ScheduleTaskCoordinator
 
 			string createTasksTableQuery = @"
 			CREATE TABLE Tasks (
-            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Title TEXT NOT NULL,
+			Id INTEGER PRIMARY KEY AUTOINCREMENT,
+			Title TEXT NOT NULL,
 			CompleteTime TEXT NOT NULL,
-            DueDate TEXT NOT NULL,
-            Priority INTEGER NOT NULL,
-			DelayTime TEXT
+			DueDate TEXT NOT NULL,
+			Priority INTEGER NOT NULL,
+			DelayTime TEXT,
+			StartTime TEXT DEFAULT '00:00:00',
+			EndTime TEXT DEFAULT '23:59:59'
 			)";
 			using (var command = new SQLiteCommand(createScheduleTableQuery, connection))
 				command.ExecuteNonQuery();
