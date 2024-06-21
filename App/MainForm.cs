@@ -271,14 +271,22 @@ namespace ScheduleTaskCoordinator
 							taskStartTime = BorderStartTime + taskDelay; // Учитываем задержку
 							taskEndTime = taskStartTime + taskDuration;
 						}
+						if (taskStartTime < (TimeSpan.Parse(taskRow.Field<string>("StartTime"))))
+						{
+							taskStartTime = TimeSpan.Parse(taskRow.Field<string>("StartTime")) + taskDelay; // Учитываем задержку
+							taskEndTime = taskStartTime + taskDuration;
+						}
 						if (taskEndTime > BorderEndTime)
 						{
 							continue; // Если задача не помещается в границы времени, пропускаем ее
 						}
+						if (taskEndTime > TimeSpan.Parse(taskRow.Field<string>("EndTime")))
+						{
+							continue; // Если задача не помещается в границы времени, пропускаем ее
+						}
 
-						// Проверяем, может ли задание войти в заданные границы и есть ли границы вообще
-						if (taskRow["StartTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["StartTime"].ToString()) && taskRow["EndTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["EndTime"].ToString()))
-							if (!(TimeSpan.Parse(taskRow.Field<string>("StartTime")) <= taskStartTime && TimeSpan.Parse(taskRow.Field<string>("EndTime")) >= taskEndTime))
+						// Проверяем, может ли задание войти в заданные границы
+						if (!(TimeSpan.Parse(taskRow.Field<string>("StartTime")) <= taskStartTime && TimeSpan.Parse(taskRow.Field<string>("EndTime")) >= taskEndTime))
 								continue;
 
 						// Проверяем, помещается ли задание в свободное время с учетом задержки между задачами
