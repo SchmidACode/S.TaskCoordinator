@@ -46,6 +46,7 @@ namespace ScheduleTaskCoordinator
 			contextMenuStrip.Items.Add(postponeMenuItem);
 			contextMenuStrip.Items.Add(BorderTaskMenuItem);
 
+			dataGridView1.MouseClick += dataGridView1_MouseClick;
 			dataGridView1.MouseDown += DataGridView1_MouseDown;
 			dataGridView1.ContextMenuStrip = contextMenuStrip;
 
@@ -85,6 +86,7 @@ namespace ScheduleTaskCoordinator
 
 				DataTable mergedData = MergeScheduleAndTasks(scheduleData, tasksData, Delay);
 				dataGridView1.DataSource = mergedData;
+				dataGridView1.Refresh();
 
 				DateTime nearestDeadline = DateTime.MaxValue;
 				string nearestDeadlineTask = string.Empty;
@@ -97,7 +99,6 @@ namespace ScheduleTaskCoordinator
 						nearestDeadlineTask = entry.Value;
 					}
 				}
-
 
 				labelFreeTime.Text = $"Свободное время:\n{FreeTime}";
 				labelBusyTime.Text = $"Время отведенное\nна занятия:\n{BusyTime}";
@@ -250,45 +251,44 @@ namespace ScheduleTaskCoordinator
 			{
 				TimeSpan taskDuration = TimeSpan.Parse(taskRow["CompleteTime"].ToString());
 				DateTime dueDate = DateTime.Parse(taskRow["DueDate"].ToString());
+				TimeSpan taskDelay = taskRow.IsNull("DelayTime") ? TimeSpan.Zero : TimeSpan.Parse(taskRow["DelayTime"].ToString());
 
-				if (dueDate > DateTime.Now.AddDays((dayOfWeek - (int)DateTime.Now.DayOfWeek + 7) % 7) && dueDate >= DateTime.Now)
+				if (dueDate > DateTime.Now.AddDays((dayOfWeek - (int)DateTime.Now.DayOfWeek + 7) % 7))
 				{
+					if (!taskRow.IsNull("DelayTime") && dueDate < DateTime.Now + taskDelay)
+						continue;
+
 					if (dueDate > DateTime.Now + taskDuration) // Проверяем, не просрочено ли задание
 					{
-						TimeSpan taskDelay = TimeSpan.Zero;
-						if (taskRow["DelayTime"] != DBNull.Value && !string.IsNullOrEmpty(taskRow["DelayTime"].ToString()))
-						{
-							taskDelay = TimeSpan.Parse(taskRow["DelayTime"].ToString());
-						}
-
 						// Рассчитываем время начала и окончания задания с учетом задержки и задержки при необходимости
 						TimeSpan taskStartTime = currentFreeTimeStart + delay + taskDelay;
 						TimeSpan taskEndTime = taskStartTime + taskDuration;
 
-						// Если задача не помещается в границы времени, переносим на границу + задержка
+						// Проверка границ времени
 						if (taskStartTime < BorderStartTime)
 						{
-							taskStartTime = BorderStartTime + taskDelay; // Учитываем задержку
+							taskStartTime = BorderStartTime + taskDelay + delay; // Учитываем задержку
 							taskEndTime = taskStartTime + taskDuration;
 						}
-						if (taskStartTime < (TimeSpan.Parse(taskRow.Field<string>("StartTime"))))
+						if (taskStartTime < TimeSpan.Parse(taskRow.Field<string>("StartTime")))
 						{
-							taskStartTime = TimeSpan.Parse(taskRow.Field<string>("StartTime")) + taskDelay; // Учитываем задержку
+							taskStartTime = TimeSpan.Parse(taskRow.Field<string>("StartTime")) + taskDelay + delay; // Учитываем задержку
 							taskEndTime = taskStartTime + taskDuration;
 						}
-						if (taskEndTime > BorderEndTime)
+						if (taskEndTime > BorderEndTime || taskEndTime > TimeSpan.Parse(taskRow.Field<string>("EndTime")))
 						{
-							continue; // Если задача не помещается в границы времени, пропускаем ее
-						}
-						if (taskEndTime > TimeSpan.Parse(taskRow.Field<string>("EndTime")))
-						{
-							continue; // Если задача не помещается в границы времени, пропускаем ее
+							UpdateTaskDelay(taskRow, taskDelay, taskStartTime, freeTimeStart);
+							continue;
 						}
 
 						// Проверяем, может ли задание войти в заданные границы
 						if (!(TimeSpan.Parse(taskRow.Field<string>("StartTime")) <= taskStartTime && TimeSpan.Parse(taskRow.Field<string>("EndTime")) >= taskEndTime))
-								continue;
+						{
+							UpdateTaskDelay(taskRow, taskDelay, taskStartTime, freeTimeStart);
+							continue;
+						}
 
+						if (taskStartTime > freeTimeStart) { taskStartTime -= delay; taskEndTime -= delay; }
 						// Проверяем, помещается ли задание в свободное время с учетом задержки между задачами
 						if (taskEndTime <= freeTimeEnd)
 						{
@@ -316,6 +316,7 @@ namespace ScheduleTaskCoordinator
 							}
 							else
 							{
+								UpdateTaskDelay(taskRow, taskDelay, taskStartTime, freeTimeStart);
 								continue;
 							}
 						}
@@ -331,6 +332,15 @@ namespace ScheduleTaskCoordinator
 			}
 
 			return freeTimeEnd.ToString(); // Возвращаем время окончания свободного интервала
+		}
+		private void UpdateTaskDelay(DataRow taskRow, TimeSpan taskDelay, TimeSpan taskStartTime, TimeSpan freeTimeStart)
+		{
+			if (!taskRow.IsNull("DelayTime"))
+			{
+				taskRow["DelayTime"] = (taskDelay - (taskStartTime - freeTimeStart)).ToString();
+				if (TimeSpan.Parse(taskRow["DelayTime"].ToString()) < TimeSpan.Zero)
+					taskRow["DelayTime"] = DBNull.Value;
+			}
 		}
 		private string GetRussianDayOfWeek(int dayOfWeek)
 		{
@@ -412,6 +422,9 @@ namespace ScheduleTaskCoordinator
 		{
 			ScheduleForm form = new ScheduleForm();
 			form.ShowDialog();
+			LoadAndUpdateData();
+		}
+		private void dataGridView1_MouseClick(object sender, EventArgs e) {
 			LoadAndUpdateData();
 		}
 		private void CaseToolStripMenuItem_Click(object sender, EventArgs e)

@@ -36,7 +36,8 @@ namespace ScheduleTaskCoordinator
 		}
 		private bool CheckAndCreateDatabase()
 		{
-			try {
+			try 
+			{
 				if (!File.Exists(databasePath))
 				{
 					if (!File.Exists(databasePath)) {
