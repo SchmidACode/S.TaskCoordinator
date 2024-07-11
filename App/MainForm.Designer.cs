@@ -50,7 +50,7 @@
             this.настройкиToolStripMenuItem});
 			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
 			this.menuStrip1.Name = "menuStrip1";
-			this.menuStrip1.Size = new System.Drawing.Size(609, 24);
+			this.menuStrip1.Size = new System.Drawing.Size(656, 24);
 			this.menuStrip1.TabIndex = 0;
 			this.menuStrip1.Text = "menuStrip1";
 			// 
@@ -67,21 +67,21 @@
 			// ScheduleToolStripMenuItem
 			// 
 			this.ScheduleToolStripMenuItem.Name = "ScheduleToolStripMenuItem";
-			this.ScheduleToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+			this.ScheduleToolStripMenuItem.Size = new System.Drawing.Size(145, 22);
 			this.ScheduleToolStripMenuItem.Text = "Расписание";
 			this.ScheduleToolStripMenuItem.Click += new System.EventHandler(this.ScheduleToolStripMenuItem_Click);
 			// 
 			// CaseToolStripMenuItem
 			// 
 			this.CaseToolStripMenuItem.Name = "CaseToolStripMenuItem";
-			this.CaseToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+			this.CaseToolStripMenuItem.Size = new System.Drawing.Size(145, 22);
 			this.CaseToolStripMenuItem.Text = "Задания";
 			this.CaseToolStripMenuItem.Click += new System.EventHandler(this.CaseToolStripMenuItem_Click);
 			// 
 			// DelayToolStripMenuItem
 			// 
 			this.DelayToolStripMenuItem.Name = "DelayToolStripMenuItem";
-			this.DelayToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+			this.DelayToolStripMenuItem.Size = new System.Drawing.Size(145, 22);
 			this.DelayToolStripMenuItem.Text = "Промежуток";
 			this.DelayToolStripMenuItem.Click += new System.EventHandler(this.DelayToolStripMenuItem_Click);
 			// 
@@ -97,7 +97,7 @@
 			this.dataGridView1.Location = new System.Drawing.Point(0, 27);
 			this.dataGridView1.MultiSelect = false;
 			this.dataGridView1.Name = "dataGridView1";
-			this.dataGridView1.Size = new System.Drawing.Size(447, 423);
+			this.dataGridView1.Size = new System.Drawing.Size(494, 423);
 			this.dataGridView1.TabIndex = 1;
 			// 
 			// timer1
@@ -112,7 +112,7 @@
 			this.labelFreeTime.AutoSize = true;
 			this.labelFreeTime.Font = new System.Drawing.Font("Rockwell", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.labelFreeTime.ForeColor = System.Drawing.Color.White;
-			this.labelFreeTime.Location = new System.Drawing.Point(453, 57);
+			this.labelFreeTime.Location = new System.Drawing.Point(500, 57);
 			this.labelFreeTime.Name = "labelFreeTime";
 			this.labelFreeTime.Size = new System.Drawing.Size(119, 19);
 			this.labelFreeTime.TabIndex = 2;
@@ -124,7 +124,7 @@
 			this.labelBusyTime.AutoSize = true;
 			this.labelBusyTime.Font = new System.Drawing.Font("Rockwell", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.labelBusyTime.ForeColor = System.Drawing.Color.White;
-			this.labelBusyTime.Location = new System.Drawing.Point(453, 142);
+			this.labelBusyTime.Location = new System.Drawing.Point(500, 142);
 			this.labelBusyTime.Name = "labelBusyTime";
 			this.labelBusyTime.Size = new System.Drawing.Size(125, 57);
 			this.labelBusyTime.TabIndex = 3;
@@ -136,7 +136,7 @@
 			this.label1.AutoSize = true;
 			this.label1.Font = new System.Drawing.Font("Rockwell", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.label1.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-			this.label1.Location = new System.Drawing.Point(453, 236);
+			this.label1.Location = new System.Drawing.Point(500, 236);
 			this.label1.Name = "label1";
 			this.label1.Size = new System.Drawing.Size(138, 38);
 			this.label1.TabIndex = 4;
@@ -147,7 +147,7 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.SystemColors.InfoText;
-			this.ClientSize = new System.Drawing.Size(609, 450);
+			this.ClientSize = new System.Drawing.Size(656, 450);
 			this.Controls.Add(this.label1);
 			this.Controls.Add(this.labelBusyTime);
 			this.Controls.Add(this.labelFreeTime);

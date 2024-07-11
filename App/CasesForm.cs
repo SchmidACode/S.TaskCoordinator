@@ -63,11 +63,12 @@ ORDER BY DueDate ASC";
 			DateTime dueDate = dateTimePicker.Value;
 			string title = richTextBox.Text;
 			short priority = Convert.ToInt16(numericUpDown.Value);
+			TimeSpan delayTime = TimeSpan.Zero;
 			if (time == TimeSpan.Zero) {
 				MessageBox.Show("Пожалуйста, введите время для задания.", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				return;
 			}
-			connector.InsertDataToBase("Tasks", "Title, CompleteTime, DueDate, Priority", $"'{title}', '{time}', '{dueDate}', {priority}");
+			connector.InsertDataToBase("Tasks", "Title, CompleteTime, DueDate, Priority, DelayTime", $"'{title}', '{time}', '{dueDate}', {priority}, '{delayTime}'");
 			LoadTable();
 		}
 		private void DeleteSelectedRow()

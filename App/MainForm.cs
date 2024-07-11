@@ -50,13 +50,14 @@ namespace ScheduleTaskCoordinator
 			dataGridView1.MouseDown += DataGridView1_MouseDown;
 			dataGridView1.ContextMenuStrip = contextMenuStrip;
 
+			DeleteExpiredTasks();
 			//MessageBox.Show($"{TimeSpan.FromMilliseconds(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds)}");
 			timer1.Interval = Convert.ToInt32(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds);
 			if (Settings.Default.LastOnlineTime != DateTime.MinValue)
 			{
-				if (Settings.Default.LastOnlineTime.AddDays(1) <= DateTime.Now)
+				if (Settings.Default.LastOnlineTime.AddMilliseconds(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds) < DateTime.Now)
 				{
-					DeleteExpiredTasks();
+					DeleteLoggedTasks();
 				}
 			}
 		}
@@ -64,15 +65,37 @@ namespace ScheduleTaskCoordinator
 		{
 			try
 			{
-				DateTime lastOnlineTime = Settings.Default.LastOnlineTime;
-
-				string deleteQuery = $"DELETE FROM Tasks WHERE DueDate <= '{lastOnlineTime.ToString("yyyy-MM-dd HH:mm:ss")}'";
+				string deleteQuery = $"DELETE FROM Tasks WHERE DueDate <= '{DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")}'";
 				connector.ExecuteQuery(deleteQuery);
 				LoadAndUpdateData();
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Error deleting expired tasks: {ex.Message}");
+			}
+		}
+		private void DeleteLoggedTasks()
+		{
+			try
+			{
+				string filePath = "task_ids.txt";
+				if (File.Exists(filePath))
+				{
+					string[] taskIds = File.ReadAllLines(filePath);
+
+					foreach (string taskId in taskIds)
+					{
+						string deleteQuery = $"DELETE FROM Tasks WHERE Id = {taskId}";
+						connector.ExecuteQuery(deleteQuery);
+					}
+
+					// Clear the file after deletion
+					File.WriteAllText(filePath, string.Empty);
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Error deleting logged tasks: {ex.Message}");
 			}
 		}
 		private void LoadAndUpdateData()
@@ -116,11 +139,25 @@ namespace ScheduleTaskCoordinator
 				dataGridView1.Columns["TimeInterval"].HeaderText = "Время";
 				dataGridView1.Columns["Priority"].HeaderText = "Приоритет";
 				dataGridView1.Columns["Plan"].HeaderText = "Название";
+
+				LogTaskIds(mergedData);
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}");
 			}
+		}
+		private void LogTaskIds(DataTable mergedtasksData)
+		{
+			string filePath = "task_ids.txt";
+			DayOfWeek currentDay = DateTime.Now.DayOfWeek;
+
+			List<string> taskIds = mergedtasksData.AsEnumerable()
+				.Where(row => row.Field<int?>("DayOfWeekNumber") == (int)currentDay) // Filter rows for the current day
+				.Select(row => row["TaskId"].ToString())
+				.ToList();
+
+			File.WriteAllLines(filePath, taskIds);
 		}
 		//private void DeleteMenuItem_Click(object sender, EventArgs e){}
 		//public void VerifyDataTypes(DataTable dataTable)
@@ -249,9 +286,11 @@ namespace ScheduleTaskCoordinator
 			// Перебираем каждое задание и пытаемся вписать его в свободное время
 			foreach (var taskRow in sortedTasks.ToList())
 			{
+				bool DelayTimeBool = false;
+				again:
 				TimeSpan taskDuration = TimeSpan.Parse(taskRow["CompleteTime"].ToString());
 				DateTime dueDate = DateTime.Parse(taskRow["DueDate"].ToString());
-				TimeSpan taskDelay = taskRow.IsNull("DelayTime") ? TimeSpan.Zero : TimeSpan.Parse(taskRow["DelayTime"].ToString());
+				TimeSpan taskDelay = taskRow.IsNull("DelayTime") && !DelayTimeBool ? TimeSpan.Zero : TimeSpan.Parse(taskRow["DelayTime"].ToString());
 
 				if (dueDate > DateTime.Now.AddDays((dayOfWeek - (int)DateTime.Now.DayOfWeek + 7) % 7))
 				{
@@ -275,20 +314,23 @@ namespace ScheduleTaskCoordinator
 							taskStartTime = TimeSpan.Parse(taskRow.Field<string>("StartTime")) + taskDelay + delay; // Учитываем задержку
 							taskEndTime = taskStartTime + taskDuration;
 						}
+
+						if (taskStartTime > freeTimeStart + delay) { taskStartTime -= delay; taskEndTime -= delay; }
 						if (taskEndTime > BorderEndTime || taskEndTime > TimeSpan.Parse(taskRow.Field<string>("EndTime")))
 						{
-							UpdateTaskDelay(taskRow, taskDelay, taskStartTime, freeTimeStart);
+							if (DelayTimeBool)
+								UpdateTaskDelay(taskRow, freeTimeStart, freeTimeEnd, freeTimeStart);
 							continue;
 						}
 
 						// Проверяем, может ли задание войти в заданные границы
 						if (!(TimeSpan.Parse(taskRow.Field<string>("StartTime")) <= taskStartTime && TimeSpan.Parse(taskRow.Field<string>("EndTime")) >= taskEndTime))
 						{
-							UpdateTaskDelay(taskRow, taskDelay, taskStartTime, freeTimeStart);
+							if (DelayTimeBool)
+								UpdateTaskDelay(taskRow, freeTimeStart, freeTimeEnd, freeTimeStart);
 							continue;
 						}
 
-						if (taskStartTime > freeTimeStart) { taskStartTime -= delay; taskEndTime -= delay; }
 						// Проверяем, помещается ли задание в свободное время с учетом задержки между задачами
 						if (taskEndTime <= freeTimeEnd)
 						{
@@ -297,6 +339,12 @@ namespace ScheduleTaskCoordinator
 							// Проверяем, достаточно ли свободного времени между заданиями
 							if (currentFreeTimeStart + delay <= taskStartTime)
 							{
+
+								if (DelayTimeBool == false) { 
+									DelayTimeBool = true;
+									goto again;
+								}
+
 								// Добавляем начальный интервал свободного времени перед заданием
 								if (taskStartTime > currentFreeTimeStart)
 								{
@@ -316,7 +364,8 @@ namespace ScheduleTaskCoordinator
 							}
 							else
 							{
-								UpdateTaskDelay(taskRow, taskDelay, taskStartTime, freeTimeStart);
+								if(DelayTimeBool)
+									UpdateTaskDelay(taskRow, freeTimeStart, freeTimeEnd, freeTimeStart);
 								continue;
 							}
 						}
@@ -364,39 +413,38 @@ namespace ScheduleTaskCoordinator
 				}
 			}
 		}
-		private void PostponeMenuItem_Click(object sender, EventArgs e)
+		private void HandleMandatoryTask(Action<int> action)
 		{
 			if (selectedRow != null)
 			{
 				string taskType = selectedRow.Cells["Type"].Value.ToString();
 				if (taskType == "Mandatory")
 				{
-					PostponeForm postponeForm = new PostponeForm((int)selectedRow.Cells["TaskId"].Value);
-					postponeForm.ShowDialog();
+					int taskId = (int)selectedRow.Cells["TaskId"].Value;
+					action(taskId);
 					LoadAndUpdateData();
 				}
 				else
 				{
-					MessageBox.Show("Можно откладывать только обязательные задания.");
+					MessageBox.Show("Можно откладывать/ограничивать только обязательные задания.");
 				}
 			}
 		}
-		private void BorderTaskMenuItem_Click(object sender, EventArgs e) 
+		private void PostponeMenuItem_Click(object sender, EventArgs e)
 		{
-			if (selectedRow != null)
+			HandleMandatoryTask(taskId =>
 			{
-				string taskType = selectedRow.Cells["Type"].Value.ToString();
-				if (taskType == "Mandatory")
-				{
-					BorderTaskForm borderTaskForm = new BorderTaskForm((int)selectedRow.Cells["TaskId"].Value);
-					borderTaskForm.ShowDialog();
-					LoadAndUpdateData();
-				}
-				else
-				{
-					MessageBox.Show("Можно ограничивать только обязательные задания.");
-				}
-			}
+				PostponeForm postponeForm = new PostponeForm(taskId);
+				postponeForm.ShowDialog();
+			});
+		}
+		private void BorderTaskMenuItem_Click(object sender, EventArgs e)
+		{
+			HandleMandatoryTask(taskId =>
+			{
+				BorderTaskForm borderTaskForm = new BorderTaskForm(taskId);
+				borderTaskForm.ShowDialog();
+			});
 		}
 		private void DataGridView1_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
 		{
@@ -452,6 +500,8 @@ namespace ScheduleTaskCoordinator
 		private void timer1_Tick(object sender, EventArgs e)
 		{
 			DeleteExpiredTasks();
+			DeleteLoggedTasks();
+
 			timer1.Interval = 24 * 60 * 60 * 1000;
 		}
 		public struct TaskKey
@@ -462,19 +512,6 @@ namespace ScheduleTaskCoordinator
 			{
 				DueDate = dueDate;
 				TaskId = taskId;
-			}
-			public override bool Equals(object obj)
-			{
-				if (obj is TaskKey)
-				{
-					TaskKey key = (TaskKey)obj;
-					return DueDate == key.DueDate && TaskId == key.TaskId;
-				}
-				return false;
-			}
-			public override int GetHashCode()
-			{
-				return DueDate.GetHashCode() ^ TaskId.GetHashCode();
 			}
 		}
 	}

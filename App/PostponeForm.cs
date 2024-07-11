@@ -23,7 +23,7 @@ namespace ScheduleTaskCoordinator
 				try
 				{
 					string time = dateTimePicker1.Value.TimeOfDay.ToString(@"hh\:mm\:ss");
-					if (time == "00:00:00") connector.UpdateDataInBase("Tasks", "DelayTime", null, id);
+					if (time == "00:00:00") connector.UpdateDataInBase("Tasks", "DelayTime", "00:00:00", id);
 					else
 						connector.UpdateDataInBase("Tasks", "DelayTime", time, id);
 				}
