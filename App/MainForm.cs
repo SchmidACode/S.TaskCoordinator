@@ -78,8 +78,11 @@ namespace ScheduleTaskCoordinator
 		{
 			try
 			{
+
 				string filePath = "task_ids.txt";
-				if (File.Exists(filePath))
+				FileInfo fileInfo = new FileInfo(filePath);
+
+				if (File.Exists(filePath) && Convert.ToBoolean(fileInfo.Length))
 				{
 					string[] taskIds = File.ReadAllLines(filePath);
 
@@ -281,7 +284,12 @@ namespace ScheduleTaskCoordinator
 			TimeSpan currentFreeTimeStart = freeTimeStart;
 
 			// Сортируем задачи по приоритету в порядке убывания (более высокий приоритет первым)
-			var sortedTasks = tasksList.OrderByDescending(task => Convert.ToInt32(task["Priority"])).ToList();
+			var sortedTasks = tasksList
+			.OrderBy(task => Convert.ToInt32(task["Priority"]))
+			.ThenByDescending(task => TimeSpan.Parse(task["DelayTime"].ToString()))
+			.ToList();
+
+
 
 			// Перебираем каждое задание и пытаемся вписать его в свободное время
 			foreach (var taskRow in sortedTasks.ToList())
@@ -292,13 +300,15 @@ namespace ScheduleTaskCoordinator
 				DateTime dueDate = DateTime.Parse(taskRow["DueDate"].ToString());
 				TimeSpan taskDelay = taskRow.IsNull("DelayTime") && !DelayTimeBool ? TimeSpan.Zero : TimeSpan.Parse(taskRow["DelayTime"].ToString());
 
-				if (dueDate > DateTime.Now.AddDays((dayOfWeek - (int)DateTime.Now.DayOfWeek + 7) % 7))
+				//if (dueDate > DateTime.Now.AddDays((dayOfWeek - (int)DateTime.Now.DayOfWeek + 7) % 7))
 				{
 					if (!taskRow.IsNull("DelayTime") && dueDate < DateTime.Now + taskDelay)
 						continue;
 
-					if (dueDate > DateTime.Now + taskDuration) // Проверяем, не просрочено ли задание
+					if (dueDate > DateTime.Now + taskDuration + taskDelay) // Проверяем, не просрочено ли задание
 					{
+						if (currentFreeTimeStart < BorderStartTime) currentFreeTimeStart = BorderStartTime;
+
 						// Рассчитываем время начала и окончания задания с учетом задержки и задержки при необходимости
 						TimeSpan taskStartTime = currentFreeTimeStart + delay + taskDelay;
 						TimeSpan taskEndTime = taskStartTime + taskDuration;
@@ -348,6 +358,9 @@ namespace ScheduleTaskCoordinator
 								// Добавляем начальный интервал свободного времени перед заданием
 								if (taskStartTime > currentFreeTimeStart)
 								{
+									//var RecursiveTaskList = tasksList;
+									//RecursiveTaskList.Remove(taskRow);
+									//InsertTasksIntoFreeTime(mergedTable, RecursiveTaskList, russianDayOfWeek, dayOfWeek, currentFreeTimeStart, taskStartTime-delay, delay);
 									FreeTime += taskStartTime - currentFreeTimeStart;
 									mergedTable.Rows.Add(russianDayOfWeek, $"{currentFreeTimeStart} - {taskStartTime}", "Free", DBNull.Value, DBNull.Value, dayOfWeek, DBNull.Value);
 								}
@@ -361,6 +374,7 @@ namespace ScheduleTaskCoordinator
 								// Удаляем задачу, как только она будет запланирована
 								tasksList.Remove(taskRow);
 								currentFreeTimeStart = taskEndTime; // Обновляем текущее время начала свободного интервала до окончания этого задания
+								
 							}
 							else
 							{

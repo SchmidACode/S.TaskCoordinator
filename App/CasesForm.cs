@@ -45,7 +45,7 @@ ORDER BY DueDate ASC";
 				dataGridView.DataSource = dataTable;
 
 				dataGridView.Columns["Title"].HeaderText = "Дела";
-				dataGridView.Columns["Id"].Visible = true;
+				dataGridView.Columns["Id"].Visible = false;
 				dataGridView.Columns["DelayTime"].Visible = false;
 				dataGridView.Columns["StartTime"].Visible = false;
 				dataGridView.Columns["EndTime"].Visible = false;
