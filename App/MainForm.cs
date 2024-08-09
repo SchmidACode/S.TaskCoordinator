@@ -111,6 +111,8 @@ namespace ScheduleTaskCoordinator
 				DataTable tasksData = connector.LoadSortedDataFromDB("SELECT * FROM Tasks");
 
 				DataTable mergedData = MergeScheduleAndTasks(scheduleData, tasksData, Delay);
+				DeletePastDataInTable(mergedData);
+
 				dataGridView1.DataSource = mergedData;
 				dataGridView1.Refresh();
 
@@ -144,12 +146,34 @@ namespace ScheduleTaskCoordinator
 				dataGridView1.Columns["Plan"].HeaderText = "Название";
 
 				LogTaskIds(mergedData);
+
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}");
 			}
 		}
+		private void DeletePastDataInTable(DataTable mergedtasksData)
+		{
+			foreach (DataRow dataRow in mergedtasksData.Rows)
+			{
+				if ((string)dataRow["DayOfWeek"] != "Нет времени")
+				{
+					int dayOfWeek = Convert.ToInt16(dataRow["DayOfWeekNumber"]);
+					string timeIntervalStr = (string)dataRow["TimeInterval"];
+
+					var timeParts = timeIntervalStr.Split('-');
+					//TimeSpan startTime = TimeSpan.Parse(timeParts[0]);
+					TimeSpan endTime = TimeSpan.Parse(timeParts[1]);
+
+					if (dayOfWeek == Convert.ToInt16(DateTime.Now.DayOfWeek) && endTime <= DateTime.Now.TimeOfDay)
+					{
+						mergedtasksData.Rows.Remove(dataRow);
+					}
+				}
+			}
+		}
+
 		private void LogTaskIds(DataTable mergedtasksData)
 		{
 			string filePath = "task_ids.txt";
