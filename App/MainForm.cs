@@ -153,28 +153,35 @@ namespace ScheduleTaskCoordinator
 				MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}");
 			}
 		}
-		private void DeletePastDataInTable(DataTable mergedtasksData)
-		{
-			foreach (DataRow dataRow in mergedtasksData.Rows)
-			{
-				if ((string)dataRow["DayOfWeek"] != "Нет времени")
-				{
-					int dayOfWeek = Convert.ToInt16(dataRow["DayOfWeekNumber"]);
-					string timeIntervalStr = (string)dataRow["TimeInterval"];
+        private void DeletePastDataInTable(DataTable mergedtasksData)
+        {
+            List<DataRow> rowsToRemove = new List<DataRow>();
 
-					var timeParts = timeIntervalStr.Split('-');
-					//TimeSpan startTime = TimeSpan.Parse(timeParts[0]);
-					TimeSpan endTime = TimeSpan.Parse(timeParts[1]);
+            foreach (DataRow dataRow in mergedtasksData.Rows)
+            {
+                if ((string)dataRow["DayOfWeek"] != "Нет времени")
+                {
+                    int dayOfWeek = Convert.ToInt16(dataRow["DayOfWeekNumber"]);
+                    string timeIntervalStr = (string)dataRow["TimeInterval"];
 
-					if (dayOfWeek == Convert.ToInt16(DateTime.Now.DayOfWeek) && endTime <= DateTime.Now.TimeOfDay)
-					{
-						mergedtasksData.Rows.Remove(dataRow);
-					}
-				}
-			}
-		}
+                    var timeParts = timeIntervalStr.Split('-');
+                    TimeSpan endTime = TimeSpan.Parse(timeParts[1]);
 
-		private void LogTaskIds(DataTable mergedtasksData)
+                    if (dayOfWeek == Convert.ToInt16(DateTime.Now.DayOfWeek) && endTime <= DateTime.Now.TimeOfDay)
+                    {
+                        rowsToRemove.Add(dataRow);
+                    }
+                }
+            }
+
+            foreach (var row in rowsToRemove)
+            {
+                mergedtasksData.Rows.Remove(row);
+            }
+        }
+
+
+        private void LogTaskIds(DataTable mergedtasksData)
 		{
 			string filePath = "task_ids.txt";
 			DayOfWeek currentDay = DateTime.Now.DayOfWeek;
@@ -252,6 +259,12 @@ namespace ScheduleTaskCoordinator
 						{
 							//mergedTable.Rows.Add(russianDayOfWeek, $"{freeTimeStart} - {freeTimeEnd}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);//
 
+							//
+							if (dayOfWeek == (int)DateTime.Now.Date.DayOfWeek)
+							{
+								freeTimeStart = TimeSpan.Parse(DateTime.Now.ToString("HH:mm"));
+							}
+
 							// Вставляем задачи, которые вписываются в это свободное время с задержкой
 							lastEndTime = InsertTasksIntoFreeTime(mergedTable, tasksList, russianDayOfWeek, dayOfWeek, freeTimeStart, freeTimeEnd, delay);
 						}
@@ -280,6 +293,7 @@ namespace ScheduleTaskCoordinator
 						//mergedTable.Rows.Add(russianDayOfWeek, $"{freeTimeStart} - {freeTimeEnd}", "Free", DBNull.Value, DBNull.Value, dayOfWeek);
 
 						// Вставляем задачи, которые вписываются в это свободное время с задержкой
+						
 						lastEndTime = InsertTasksIntoFreeTime(mergedTable, tasksList, russianDayOfWeek, dayOfWeek, freeTimeStart, freeTimeEnd, delay);
 					}
 					else
