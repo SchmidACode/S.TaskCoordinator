@@ -23,7 +23,6 @@ namespace ScheduleTaskCoordinator
 			dateTimePicker1.Value = DateTime.Today.Add(Settings.Default.DelayTime);
 			dateTimePicker2.Value = DateTime.Today.Add(Settings.Default.BorderStartTime);
 			dateTimePicker3.Value = DateTime.Today.Add(Settings.Default.BorderEndTime);
-			
 		}
 		private void btnOK_Click(object sender, EventArgs e)
 		{
