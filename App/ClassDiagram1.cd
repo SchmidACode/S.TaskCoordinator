@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="TaskCoordinator.BorderTaskForm">
+    <Position X="11" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACAAABACAACAAIACAAAAAEAAEAAAAAAAAgE=</HashCode>
+      <FileName>BorderTaskForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.CasesForm">
+    <Position X="9.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAABAAADAAAFIDAASBAIACgASAgEAAEAAQgAEgBAI=</HashCode>
+      <FileName>CasesForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.DelayForm">
+    <Position X="7.5" Y="5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACAAABACAACAAIACAAAAAEAAAQAAAAAAAAA=</HashCode>
+      <FileName>DelayForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.MainForm">
+    <Position X="0.5" Y="2.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Nested Types" Collapsed="false" />
+    </Compartments>
+    <NestedTypes>
+      <Struct Name="ScheduleTaskCoordinator.MainForm.TaskKey">
+        <TypeIdentifier>
+          <NewMemberFileName>MainForm.cs</NewMemberFileName>
+        </TypeIdentifier>
+        <Lollipop Position="0.2" />
+      </Struct>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>ARQAcgCACCAAhhARQALAQCACCgoAMQIANIEAABoAGAE=</HashCode>
+      <FileName>MainForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.PostponeForm">
+    <Position X="11" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACAAABACAACAAIACAAAAAEAAEACAAAAAAgA=</HashCode>
+      <FileName>PostponeForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.ScheduleForm">
+    <Position X="5.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAgBAAADAACQAQAASBQAAKgAyAgAIAGAAQAAEgAQI=</HashCode>
+      <FileName>ScheduleForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.WelcomeForm">
+    <Position X="4" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgAAAAQAACgAAAAQBACAAgACAAEAIAAAAAAAAQAAAAA=</HashCode>
+      <FileName>WelcomeForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ScheduleTaskCoordinator.Connector">
+    <Position X="2.25" Y="5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAABAAAAAAAAAAAAEAAAQAAABAQACAAAAAAAAA=</HashCode>
+      <FileName>Сonnector.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="WindowsFormsApp.Program">
+    <Position X="2.25" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAA=</HashCode>
+      <FileName>Program.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="TaskCoordinator.Properties.Resources">
+    <Position X="7.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAABEAAAAQAAAAAAAAAAAAAAAIA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="TaskCoordinator.Properties.Settings">
+    <Position X="2.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAAAACAAAAAAAAIAAAAAABAAABAAAAAAAACAA=</HashCode>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

@@ -1,75 +1,73 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-
 using System.Data.SQLite;
 using System.IO;
-using System.Data.SqlClient;
-using System.Reflection.Emit;
+using System.Windows.Forms;
 
 namespace ScheduleTaskCoordinator
 {
-	public partial class WelcomeForm : Form
-	{
-		private string databasePath = "ScheduleTaskCoordinator.db";
-		private Timer closeTimer;
-		public WelcomeForm()
-		{
-			InitializeComponent();
+    public partial class WelcomeForm : Form
+    {
+        private string databasePath = "ScheduleTaskCoordinator.db";
+        private Timer closeTimer;
 
-			int panelCenterX = panel1.Width / 2;
-			int panelCenterY = panel1.Height / 2;
+        public WelcomeForm()
+        {
+            InitializeComponent();
 
-			int labelWidth = labelInformation.Width;
-			int labelHeight = labelInformation.Height;
+            int panelCenterX = panel1.Width / 2;
+            int panelCenterY = panel1.Height / 2;
 
-			this.StartPosition = FormStartPosition.CenterScreen;
-			labelInformation.Location = new System.Drawing.Point(panelCenterX - labelWidth / 2, panelCenterY - labelHeight / 2);
-			CheckAndCreateDatabase();
-			StartCloseTimer();
-		}
-		private bool CheckAndCreateDatabase()
-		{
-			try 
-			{
-				if (!File.Exists(databasePath))
-				{
-					if (!File.Exists(databasePath)) {
-						SQLiteConnection.CreateFile(databasePath);
-						using (var connection = new SQLiteConnection($"Data Source={databasePath};Version=3"))
-						{
-							connection.Open();
-							CreateTables(connection);
-						}
-					}
-					if (File.Exists(databasePath)) {
-						labelInformation.Text = $"База данных успешно создана по пути {Path.Combine(Directory.GetCurrentDirectory(), databasePath)}";
-						return true;
-					}
-					else {
-						labelInformation.Text = $"База данных не создана из-за ошибки";
-						return false;
-					}
-				}
-				else {
-					labelInformation.Text = $"База данных найдена по пути {Path.Combine(Directory.GetCurrentDirectory(), databasePath)}";
-					return true;
-				}
-			}
-			catch (Exception ex) {
-				labelInformation.Text = $"Ошибка при создании или открытии базы данных: {ex.Message}";
-				return false;
-			}
-		}
-		private void CreateTables(SQLiteConnection connection)
-		{
-			string createScheduleTableQuery = @"
+            int labelWidth = labelInformation.Width;
+            int labelHeight = labelInformation.Height;
+
+            this.StartPosition = FormStartPosition.CenterScreen;
+            labelInformation.Location = new System.Drawing.Point(panelCenterX - labelWidth / 2, panelCenterY - labelHeight / 2);
+            CheckAndCreateDatabase();
+            StartCloseTimer();
+        }
+
+        private bool CheckAndCreateDatabase()
+        {
+            try
+            {
+                if (!File.Exists(databasePath))
+                {
+                    if (!File.Exists(databasePath))
+                    {
+                        SQLiteConnection.CreateFile(databasePath);
+                        using (var connection = new SQLiteConnection($"Data Source={databasePath};Version=3"))
+                        {
+                            connection.Open();
+                            CreateTables(connection);
+                        }
+                    }
+                    if (File.Exists(databasePath))
+                    {
+                        labelInformation.Text = $"База данных успешно создана по пути {Path.Combine(Directory.GetCurrentDirectory(), databasePath)}";
+                        return true;
+                    }
+                    else
+                    {
+                        labelInformation.Text = $"База данных не создана из-за ошибки";
+                        return false;
+                    }
+                }
+                else
+                {
+                    labelInformation.Text = $"База данных найдена по пути {Path.Combine(Directory.GetCurrentDirectory(), databasePath)}";
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                labelInformation.Text = $"Ошибка при создании или открытии базы данных: {ex.Message}";
+                return false;
+            }
+        }
+
+        private void CreateTables(SQLiteConnection connection)
+        {
+            string createScheduleTableQuery = @"
 			CREATE TABLE Schedule (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Plan TEXT NOT NULL,
@@ -78,7 +76,7 @@ namespace ScheduleTaskCoordinator
             EndTime TEXT NOT NULL
 			)";
 
-			string createTasksTableQuery = @"
+            string createTasksTableQuery = @"
 			CREATE TABLE Tasks (
 			Id INTEGER PRIMARY KEY AUTOINCREMENT,
 			Title TEXT NOT NULL,
@@ -89,25 +87,27 @@ namespace ScheduleTaskCoordinator
 			StartTime TEXT DEFAULT '00:00:00',
 			EndTime TEXT DEFAULT '23:59:59'
 			)";
-			using (var command = new SQLiteCommand(createScheduleTableQuery, connection))
-				command.ExecuteNonQuery();
+            using (var command = new SQLiteCommand(createScheduleTableQuery, connection))
+                command.ExecuteNonQuery();
 
-			using (var command = new SQLiteCommand(createTasksTableQuery, connection))
-				command.ExecuteNonQuery();
-		}
-		private void StartCloseTimer()
-		{
-			closeTimer = new Timer();
-			closeTimer.Interval = 3000;
-			closeTimer.Tick += CloseTimer_Tick;
-			closeTimer.Start();
-		}
-		private void CloseTimer_Tick(object sender, EventArgs e)
-		{
-			closeTimer.Stop();
-			if(CheckAndCreateDatabase())
-				this.DialogResult = DialogResult.OK;
-			this.Close();
-		}
-	}
+            using (var command = new SQLiteCommand(createTasksTableQuery, connection))
+                command.ExecuteNonQuery();
+        }
+
+        private void StartCloseTimer()
+        {
+            closeTimer = new Timer();
+            closeTimer.Interval = 3000;
+            closeTimer.Tick += CloseTimer_Tick;
+            closeTimer.Start();
+        }
+
+        private void CloseTimer_Tick(object sender, EventArgs e)
+        {
+            closeTimer.Stop();
+            if (CheckAndCreateDatabase())
+                this.DialogResult = DialogResult.OK;
+            this.Close();
+        }
+    }
 }

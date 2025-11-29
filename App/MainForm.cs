@@ -1,17 +1,15 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.IO;
-using ScheduleTaskCoordinator;
-using TaskCoordinator.Properties;
 using TaskCoordinator;
-using Microsoft.VisualBasic;
-using Telerik.WinControls;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
+using TaskCoordinator.Properties;
 
 namespace ScheduleTaskCoordinator
 {
@@ -19,6 +17,7 @@ namespace ScheduleTaskCoordinator
     {
         private Connector connector;
         private TimeSpan FreeTime, BusyTime;
+
         // Словарь для хранения ближайшего дедлайна: ключ – пара (DueDate, TaskId)
         private Dictionary<TaskKey, string> Deadline = new Dictionary<TaskKey, string>();
 
@@ -28,6 +27,9 @@ namespace ScheduleTaskCoordinator
         private TimeSpan preparationTime = TimeSpan.Zero;
         private bool isFirstRun = true; // Флаг для проверки первого запуска
 
+        // Таймер: сначала ждём до конца дня, затем переключаемся на 1s тик
+        private bool timerSwitchedTo1s = false;
+
         public MainForm()
         {
             InitializeComponent();
@@ -35,13 +37,20 @@ namespace ScheduleTaskCoordinator
 
             dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dataGridView1.ReadOnly = true;
+
+            dataGridView1.DefaultCellStyle.Font = new Font(
+            dataGridView1.Font.FontFamily,
+            dataGridView1.Font.Size * 1.3f,
+            dataGridView1.Font.Style);
+            dataGridView1.RowTemplate.Height = (int)(dataGridView1.RowTemplate.Height * 1.3f);
+
             Controls.Add(dataGridView1);
 
             // Инициализация событий и контекстного меню
             dataGridView1.ColumnHeaderMouseClick += DataGridView1_ColumnHeaderMouseClick;
             dataGridView1.DataBindingComplete += DataGridView1_DataBindingComplete;
-            dataGridView1.MouseClick += dataGridView1_MouseClick;
             dataGridView1.MouseDown += DataGridView1_MouseDown;
+
             contextMenuStrip = new ContextMenuStrip();
             var postponeMenuItem = new ToolStripMenuItem("Отложить задание", null, PostponeMenuItem_Click);
             var borderTaskMenuItem = new ToolStripMenuItem("Ограничить задание", null, BorderTaskMenuItem_Click);
@@ -50,21 +59,21 @@ namespace ScheduleTaskCoordinator
             dataGridView1.ContextMenuStrip = contextMenuStrip;
 
             LoadAndUpdateData();
-            //DeleteExpiredTasks();
 
             // Настройка таймера: первый интервал до конца дня
-            timer1.Interval = Convert.ToInt32(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds);
+            //var millisToMidnight = (int)Math.Min(int.MaxValue, (TimeSpan.FromHours(24) - DateTime.Now.TimeOfDay).TotalMilliseconds);
+            timer1.Interval = 60000;
+
             if (Settings.Default.LastOnlineTime != DateTime.MinValue)
             {
-                if (Settings.Default.LastOnlineTime.AddMilliseconds(TimeSpan.FromHours(24).TotalMilliseconds - DateTime.Now.TimeOfDay.TotalMilliseconds) < DateTime.Now)
-                {
-                    //DeleteLoggedTasks();
-                }
+                // Проверка удаления логов
+                // if (Settings.Default.LastOnlineTime.AddMilliseconds(millisToMidnight) < DateTime.Now) { /* DeleteLoggedTasks(); */ }
             }
-            timer1.Interval = 1000;
+
             timer1.Tick += timer1_Tick;
             timer1.Start();
         }
+
         /// <summary>
         /// Переносит из mergedData строки текущего дня с концом интервала ≤ Now,
         /// возвращая массивы значений этих строк.
@@ -73,8 +82,12 @@ namespace ScheduleTaskCoordinator
         {
             var movedValues = new List<object[]>();
             var rowsToRemove = new List<DataRow>();
-            foreach (DataRow dataRow in mergedData.Rows) {
-                if ((string)dataRow["DayOfWeek"] == "Нет времени")
+            foreach (DataRow dataRow in mergedData.Rows)
+            {
+                if (dataRow.IsNull("DayOfWeek") || (string)dataRow["DayOfWeek"] == "Нет времени")
+                    continue;
+
+                if (dataRow.IsNull("DayOfWeekNumber"))
                     continue;
 
                 int dayOfWeek = Convert.ToInt32(dataRow["DayOfWeekNumber"]);
@@ -83,7 +96,7 @@ namespace ScheduleTaskCoordinator
 
                 var times = ((string)dataRow["TimeInterval"]).Split('-');
                 var endTime = TimeSpan.Parse(times[1].Trim());
-                if (endTime <= DateTime.Now.TimeOfDay && (string)dataRow["Type"]=="Free")
+                if (endTime <= DateTime.Now.TimeOfDay && (string)dataRow["Type"] == "Free")
                     rowsToRemove.Add(dataRow);
                 else if (endTime <= DateTime.Now.TimeOfDay)
                 {
@@ -92,15 +105,16 @@ namespace ScheduleTaskCoordinator
                 }
             }
 
-            // Удаляем их из таблицы
             foreach (var row in rowsToRemove)
                 mergedData.Rows.Remove(row);
 
             return movedValues;
         }
+
         /// <summary>
         /// Собирает расписание + задачи, планируя их на свободные слоты.
-        /// В out-параметре возвращает те задачи, которые не удалось запланировать.
+        /// Учитывает ограниченные задачи: если они есть, сокращает freeEnd до их StartTime,
+        /// затем продолжает обрабатывать оставшуюся часть интервала.
         /// </summary>
         public DataTable MergeScheduleAndTasks(DataTable scheduleTable, DataTable tasksTable, out List<DataRow> remainingTasks)
         {
@@ -137,43 +151,97 @@ namespace ScheduleTaskCoordinator
 
                 TimeSpan currentPointer = Settings.Default.BorderStartTime;
 
-                foreach (var schedRow in daySchedule) {
+                foreach (var schedRow in daySchedule)
+                {
                     var start = TimeSpan.Parse(schedRow.Field<string>("StartTime"));
                     var end = TimeSpan.Parse(schedRow.Field<string>("EndTime"));
 
-                    if (start > currentPointer)
-                        currentPointer = ProcessFreeInterval(mergedTable, tasksList, russianDay, dow, currentPointer, start, Settings.Default.DelayTime);
+                    // Обрабатываем интервал [currentPointer, start] с учётом ограниченных задач
+                    // ЦИКЛ: пока не дошли до start
+                    while (currentPointer < start)
+                    {
+                        TimeSpan adjustedEnd = start;
+
+                        // Ищем первую ограниченную задачу между currentPointer и start
+                        foreach (var task in tasksList)
+                        {
+                            if (task.Table.Columns.Contains("StartTime") &&
+                                task.Table.Columns.Contains("EndTime") &&
+                                !task.IsNull("StartTime") &&
+                                !task.IsNull("EndTime"))
+                            {
+                                var taskStart = TimeSpan.Parse(task["StartTime"].ToString());
+                                var taskEnd = TimeSpan.Parse(task["EndTime"].ToString());
+
+                                // Если это не полнодневная задача и её окно начинается в нашем диапазоне
+                                if (!(taskStart == TimeSpan.Zero && taskEnd == TimeSpan.Parse("23:59:59")))
+                                {
+                                    if (taskStart > currentPointer && taskStart < adjustedEnd)
+                                        adjustedEnd = taskStart;
+                                }
+                            }
+                        }
+
+                        // Обрабатываем слот [currentPointer, adjustedEnd]
+                        ProcessFreeInterval(mergedTable, tasksList, russianDay, dow, currentPointer, adjustedEnd, Settings.Default.DelayTime);
+                        currentPointer = adjustedEnd;
+                    }
 
                     mergedTable.Rows.Add(russianDay, $"{schedRow.Field<string>("StartTime")} - {schedRow.Field<string>("EndTime")}", "Scheduled", DBNull.Value, schedRow.Field<string>("Plan"), dow, DBNull.Value);
                     currentPointer = end;
                 }
 
-                // Оставшийся кусок дня
+                // Оставшийся кусок дня — аналогично в цикле
                 TimeSpan dayEnd = TimeSpan.Parse("23:59:59");
-                if (currentPointer < dayEnd) 
-                    currentPointer = ProcessFreeInterval(mergedTable, tasksList, russianDay, dow, currentPointer, dayEnd, Settings.Default.DelayTime);
+                while (currentPointer < dayEnd)
+                {
+                    TimeSpan adjustedDayEnd = dayEnd;
+
+                    // Ищем первую ограниченную задачу в остатке дня
+                    foreach (var task in tasksList)
+                    {
+                        if (task.Table.Columns.Contains("StartTime") &&
+                            task.Table.Columns.Contains("EndTime") &&
+                            !task.IsNull("StartTime") &&
+                            !task.IsNull("EndTime"))
+                        {
+                            var taskStart = TimeSpan.Parse(task["StartTime"].ToString());
+                            var taskEnd = TimeSpan.Parse(task["EndTime"].ToString());
+
+                            // Если это не полнодневная задача и её окно начинается после currentPointer
+                            if (!(taskStart == TimeSpan.Zero && taskEnd == TimeSpan.Parse("23:59:59")))
+                            {
+                                if (taskStart > currentPointer && taskStart < adjustedDayEnd)
+                                    adjustedDayEnd = taskStart;
+                            }
+                        }
+                    }
+
+                    ProcessFreeInterval(mergedTable, tasksList, russianDay, dow, currentPointer, adjustedDayEnd, Settings.Default.DelayTime);
+                    currentPointer = adjustedDayEnd;
+                }
             }
+
             foreach (var unscheduled in tasksList)
             {
                 int priority = Convert.ToInt32(unscheduled["Priority"]);
                 string title = unscheduled.Field<string>("Title");
                 int id = Convert.ToInt32(unscheduled["Id"]);
-                // DayOfWeekNumber = -1, будет отображаться как «Нет времени»
                 mergedTable.Rows.Add(
-                    "Нет времени",      // DayOfWeek
-                    "-",                // TimeInterval
-                    "Mandatory",           // Type или любой ваш маркер
+                    "Нет времени",
+                    "-",
+                    "Mandatory",
                     priority,
                     title,
-                    -1,                 // DayOfWeekNumber
-                    id                  // TaskId
+                    -1,
+                    id
                 );
             }
-            // Всё, что не удалось запланировать, останется в remainingTasks
+
             remainingTasks = tasksList;
-            // Возвращаем результирующую таблицу
             return mergedTable;
         }
+
         /// <summary>
         /// Полная версия LoadAndUpdateData с автозаполнением перенесённых блоков.
         /// </summary>
@@ -184,6 +252,13 @@ namespace ScheduleTaskCoordinator
                 Deadline.Clear();
                 FreeTime = BusyTime = TimeSpan.Zero;
 
+                // Первый запуск — спрашиваем подготовку
+                if (isFirstRun)
+                {
+                    isFirstRun = false;
+                    AskForPreparationTime();
+                }
+
                 var scheduleData = connector.LoadSortedDataFromDB("SELECT * FROM Schedule");
                 var tasksData = connector.LoadSortedDataFromDB("SELECT * FROM Tasks");
 
@@ -193,53 +268,61 @@ namespace ScheduleTaskCoordinator
                 var movedValuesList = MovePastDataToEnd(mergedData);
                 dataGridView1.DataSource = mergedData;
 
-                // Для каждого перенесённого блока:
-                for (int i = 0; i < movedValuesList.Count - 1; i++)
+                // Для каждого перенесённого блока: (обрабатываем индивидуально)
+                for (int i = 0; i < movedValuesList.Count; i++)
                 {
                     var currentRowValues = movedValuesList[i];
-                    var nextRowValues = movedValuesList[i + 1];
 
-                    // Воссоздаём строки из массива значений
+                    // Воссоздаём строку из массива значений
                     var currentRow = mergedData.NewRow();
                     currentRow.ItemArray = currentRowValues;
 
-                    var nextRow = mergedData.NewRow();
-                    nextRow.ItemArray = nextRowValues;
-
-                    // Сдвигаем день недели на +7 (перенос на следующую неделю)
+                    // Сдвигаем день недели на следующую неделю (weekOffset = 1)
                     int originalDayNumber = Convert.ToInt32(currentRow["DayOfWeekNumber"]);
-                    int shiftedDayNumber = (originalDayNumber + 7) % 7;
-                    currentRow["DayOfWeekNumber"] = shiftedDayNumber;
+                    int shiftedDayNumber = originalDayNumber; // оставляем номер дня тот же, но учтём weekOffset при планировании
 
                     string shiftedRussianDay = GetRussianDayOfWeek(shiftedDayNumber);
+                    currentRow["DayOfWeekNumber"] = shiftedDayNumber;
                     currentRow["DayOfWeek"] = shiftedRussianDay;
+
+                    // Обновляем план с пометкой о переносе
+                    if (currentRow["Plan"] != DBNull.Value && currentRow["Plan"] is string)
+                        currentRow["Plan"] = "[Перенос] " + currentRow["Plan"];
 
                     // Получаем границы интервала времени
                     var currentTimeIntervalParts = ((string)currentRow["TimeInterval"]).Split('-');
-                    var nextTimeIntervalParts = ((string)nextRow["TimeInterval"]).Split('-');
-
                     TimeSpan currentFreeEnd = TimeSpan.Parse(currentTimeIntervalParts[1].Trim());
-                    TimeSpan nextFreeStart = TimeSpan.Parse(nextTimeIntervalParts[0].Trim());
-
-                    // Обновляем план с пометкой о переносе
-                    currentRow["Plan"] = "[Перенос] " + currentRow["Plan"];
 
                     // Добавляем строку в таблицу
                     mergedData.Rows.Add(currentRow);
 
-                    // Запускаем автоматическое распределение задач на этот отложенный слот
-                    ProcessFreeInterval(mergedData,remainingTasks,shiftedRussianDay,shiftedDayNumber, currentFreeEnd,nextFreeStart,Settings.Default.DelayTime);
+                    // Ищем следующий блок в том же дне, чтобы определить границу поиска свободного времени
+                    TimeSpan nextFreeStart = TimeSpan.Parse("23:59:59");
+                    var sameDayRows = mergedData.AsEnumerable()
+                        .Where(r => !r.IsNull("DayOfWeekNumber") && Convert.ToInt32(r["DayOfWeekNumber"]) == shiftedDayNumber)
+                        .Select(r => r.Field<string>("TimeInterval")).ToList();
+                    // Находим минимальный старт > currentFreeEnd
+                    TimeSpan? foundNextStart = null;
+                    foreach (var ti in sameDayRows)
+                    {
+                        var parts = ti.Split('-');
+                        if (parts.Length < 2) continue;
+                        var start = TimeSpan.Parse(parts[0].Trim());
+                        if (start > currentFreeEnd)
+                        {
+                            if (foundNextStart == null || start < foundNextStart)
+                                foundNextStart = start;
+                        }
+                    }
+                    if (foundNextStart.HasValue)
+                        nextFreeStart = foundNextStart.Value;
+
+                    // Запускаем автоматическое распределение задач на этот отложенный слот (на следующую неделю)
+                    ProcessFreeInterval(mergedData, remainingTasks, shiftedRussianDay, shiftedDayNumber, currentFreeEnd, nextFreeStart, Settings.Default.DelayTime, weekOffset: 1);
                 }
 
                 // Обновляем представление
                 dataGridView1.Refresh();
-
-                // Первый запуск — спрашиваем подготовку
-                if (isFirstRun)
-                {
-                    isFirstRun = false;
-                    AskForPreparationTime();
-                }
 
                 // Остальное — как было
                 UpdateTaskInformation();
@@ -247,14 +330,16 @@ namespace ScheduleTaskCoordinator
                 labelFreeTime.Text = $"Свободное время:\n{f_FreeTime}";
                 labelBusyTime.Text = $"Время отведенное\nна занятия:\n{BusyTime}";
 
-                dataGridView1.Columns["Type"].Visible = false;
-                dataGridView1.Columns["DayOfWeekNumber"].Visible = false;
-                dataGridView1.Columns["TaskId"].Visible = false;
+                if (dataGridView1.Columns.Contains("Type")) dataGridView1.Columns["Type"].Visible = false;
+                if (dataGridView1.Columns.Contains("DayOfWeekNumber")) dataGridView1.Columns["DayOfWeekNumber"].Visible = false;
+                if (dataGridView1.Columns.Contains("TaskId")) dataGridView1.Columns["TaskId"].Visible = false;
                 dataGridView1.ClearSelection();
-                dataGridView1.Columns["DayOfWeek"].HeaderText = "День недели";
-                dataGridView1.Columns["TimeInterval"].HeaderText = "Время";
-                dataGridView1.Columns["Priority"].HeaderText = "Приоритет";
-                dataGridView1.Columns["Plan"].HeaderText = "Название";
+                if (dataGridView1.Columns.Contains("DayOfWeek")) dataGridView1.Columns["DayOfWeek"].HeaderText = "День недели";
+                if (dataGridView1.Columns.Contains("TimeInterval")) dataGridView1.Columns["TimeInterval"].HeaderText = "Время";
+                if (dataGridView1.Columns.Contains("Priority")) dataGridView1.Columns["Priority"].HeaderText = "Приоритет";
+                if (dataGridView1.Columns.Contains("Plan")) dataGridView1.Columns["Plan"].HeaderText = "Название";
+
+                dataGridView1.Columns["Priority"].Width = dataGridView1.Columns["DayOfWeek"].Width / 4;
 
                 LogTaskIds(mergedData);
             }
@@ -263,26 +348,45 @@ namespace ScheduleTaskCoordinator
                 MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}");
             }
         }
+
         /// <summary>
         /// Обрабатывает свободный интервал [freeStart, freeEnd] для добавления задач.
         /// Возвращает конечное значение свободного интервала (то есть freeEnd).
         /// </summary>
-        private TimeSpan ProcessFreeInterval(DataTable mergedTable,List<DataRow> tasksList,string russianDay, int dayOfWeek,TimeSpan freeStart,TimeSpan freeEnd,TimeSpan delayToApply)
+        private TimeSpan ProcessFreeInterval(DataTable mergedTable, List<DataRow> tasksList, string russianDay, int dayOfWeek, TimeSpan freeStart, TimeSpan freeEnd, TimeSpan delayToApply, int weekOffset = 0)
         {
             TimeSpan currentFreeStart = freeStart;
 
             // Определяем сегодня и смещение к нужному дню недели
             int todayDow = (int)DateTime.Today.DayOfWeek;
-            int daysUntil = (dayOfWeek - todayDow + 7) % 7;
-            // Если dayOfWeek == todayDow, daysUntil == 0, иначе — сколько дней вперед
+            int daysUntil = (dayOfWeek - todayDow + 7) % 7 + weekOffset * 7;
 
             var sortedTasks = tasksList
-                .OrderBy(task => Convert.ToInt32(task["Priority"]))
-                .ThenByDescending(task =>
-                    task.IsNull("DelayTime")
-                        ? TimeSpan.Zero
-                        : TimeSpan.Parse(task["DelayTime"].ToString()))
-                .ToList();
+            .OrderBy(task =>
+            {
+                if (task.IsNull("DueDate") || !DateTime.TryParse(task["DueDate"].ToString(), out DateTime dueDate))
+                    return DateTime.MaxValue;
+                return dueDate;
+            })
+            .ThenBy(task =>
+            {
+                if (task.IsNull("Priority") || !int.TryParse(task["Priority"].ToString(), out int priority))
+                    return int.MaxValue;
+                return priority;
+            })
+            .ThenBy(task =>
+            {
+                if (task.IsNull("DelayTime") || !TimeSpan.TryParse(task["DelayTime"].ToString(), out TimeSpan delayTime))
+                    return TimeSpan.Zero;
+                return delayTime;
+            })
+            .ThenBy(task =>
+            {
+                if (task.IsNull("CompleteTime") || !TimeSpan.TryParse(task["CompleteTime"].ToString(), out TimeSpan completeTime))
+                    return TimeSpan.Zero;
+                return completeTime;
+            })
+            .ToList();
 
             bool isAfterScheduled = true;
             bool setted = false;
@@ -290,23 +394,23 @@ namespace ScheduleTaskCoordinator
             foreach (var taskRow in sortedTasks.ToList())
             {
                 // Пропускаем уже прошедшие сегодня интервалы
-                if ((int)DateTime.Now.DayOfWeek == dayOfWeek && freeEnd < DateTime.Now.TimeOfDay)
+                if ((int)DateTime.Now.DayOfWeek == dayOfWeek && freeEnd < DateTime.Now.TimeOfDay && weekOffset == 0)
                     continue;
 
                 // Вставка подготовительного слота на текущем дне
                 if ((int)DateTime.Now.DayOfWeek == dayOfWeek
-                    && freeStart < DateTime.Now.TimeOfDay
-                    && !setted)
+                && freeStart < DateTime.Now.TimeOfDay
+                && !setted && weekOffset == 0)
                 {
                     var nowTs = DateTime.Now.TimeOfDay;
-                    nowTs = nowTs.Subtract(TimeSpan.FromMilliseconds(nowTs.Milliseconds));
+                    nowTs = nowTs.Subtract(TimeSpan.FromMilliseconds(nowTs.Milliseconds)); // убираем миллисекунды
                     currentFreeStart = nowTs + preparationTime;
                     mergedTable.Rows.Add(
-                        russianDay,
-                        $"{FormatTime(currentFreeStart - preparationTime)} - {FormatTime(currentFreeStart)}",
-                        "Free",
-                        DBNull.Value, DBNull.Value,
-                        dayOfWeek, DBNull.Value);
+                    russianDay,
+                    $"{FormatTime(currentFreeStart - preparationTime)} - {FormatTime(currentFreeStart)}",
+                    "Free",
+                    DBNull.Value, DBNull.Value,
+                    dayOfWeek, DBNull.Value);
                     setted = true;
                     preparationTime = TimeSpan.Zero;
                 }
@@ -314,30 +418,30 @@ namespace ScheduleTaskCoordinator
                 TimeSpan taskDuration = TimeSpan.Parse(taskRow["CompleteTime"].ToString());
                 DateTime dueDate = DateTime.Parse(taskRow["DueDate"].ToString());
                 TimeSpan taskDelay = taskRow.IsNull("DelayTime")
-                    ? TimeSpan.Zero
-                    : TimeSpan.Parse(taskRow["DelayTime"].ToString());
+                ? TimeSpan.Zero
+                : TimeSpan.Parse(taskRow["DelayTime"].ToString());
 
                 TimeSpan tentativeStart = currentFreeStart + delayToApply + taskDelay;
                 if (isAfterScheduled)
-                    tentativeStart -= delayToApply;
+                    tentativeStart -= delayToApply; // оставляем поведение, которое было раньше
 
                 TimeSpan tentativeEnd = tentativeStart + taskDuration;
 
                 // Проверка ограничений StartTime/EndTime из задачи
                 if (taskRow.Table.Columns.Contains("StartTime") &&
-                    taskRow.Table.Columns.Contains("EndTime"))
+                taskRow.Table.Columns.Contains("EndTime"))
                 {
                     TimeSpan taskAllowedStart = TimeSpan.Parse(taskRow["StartTime"].ToString());
                     TimeSpan taskAllowedEnd = TimeSpan.Parse(taskRow["EndTime"].ToString());
 
                     TimeSpan allowedStart =
-                        Settings.Default.BorderStartTime > taskAllowedStart
-                            ? Settings.Default.BorderStartTime
-                            : taskAllowedStart;
+                    Settings.Default.BorderStartTime > taskAllowedStart
+                    ? Settings.Default.BorderStartTime
+                    : taskAllowedStart;
                     TimeSpan allowedEnd =
-                        Settings.Default.BorderEndTime < taskAllowedEnd
-                            ? Settings.Default.BorderEndTime
-                            : taskAllowedEnd;
+                    Settings.Default.BorderEndTime < taskAllowedEnd
+                    ? Settings.Default.BorderEndTime
+                    : taskAllowedEnd;
 
                     if (tentativeStart < allowedStart)
                     {
@@ -360,31 +464,34 @@ namespace ScheduleTaskCoordinator
 
                 // Проверка укладывается ли задача в свободный слот
                 if (tentativeEnd <= freeEnd
-                    && tentativeStart >= Settings.Default.BorderStartTime
-                    && tentativeEnd <= Settings.Default.BorderEndTime)
+                && tentativeStart >= Settings.Default.BorderStartTime
+                && tentativeEnd <= Settings.Default.BorderEndTime)
                 {
-                    // --- Здесь изменили логику: учитываем день недели ---
-                    DateTime scheduledDateTime = DateTime.Today
-                        .AddDays(daysUntil)       // смещение к дню недели
-                        .Add(tentativeStart);     // добавляем время
-
-                    if (dueDate > scheduledDateTime)
+                    // Убедитесь, что задача не пересекается с предыдущей
+                    if (tentativeStart >= currentFreeStart)
                     {
-                        // Вставляем промежуток до задачи
-                        if (tentativeStart > currentFreeStart)
+                        // --- Здесь изменили логику: учитываем день недели и weekOffset ---
+                        DateTime scheduledDateTime = DateTime.Today
+                        .AddDays(daysUntil) // смещение к дню недели + weekOffset
+                        .Add(tentativeStart); // добавляем время
+
+                        if (dueDate > scheduledDateTime)
                         {
-                            mergedTable.Rows.Add(
+                            // Вставляем промежуток до задачи
+                            if (tentativeStart > currentFreeStart)
+                            {
+                                mergedTable.Rows.Add(
                                 russianDay,
                                 $"{FormatTime(currentFreeStart)} - {FormatTime(tentativeStart)}",
                                 "Free",
                                 DBNull.Value, DBNull.Value,
                                 dayOfWeek, DBNull.Value);
-                            FreeTime += tentativeStart - currentFreeStart;
-                        }
+                                FreeTime += tentativeStart - currentFreeStart;
+                            }
 
-                        // Вставляем саму задачу
-                        int priority = Convert.ToInt32(taskRow["Priority"]);
-                        mergedTable.Rows.Add(
+                            // Вставляем саму задачу
+                            int priority = Convert.ToInt32(taskRow["Priority"]);
+                            mergedTable.Rows.Add(
                             russianDay,
                             $"{FormatTime(tentativeStart)} - {FormatTime(tentativeEnd)}",
                             "Mandatory",
@@ -392,15 +499,16 @@ namespace ScheduleTaskCoordinator
                             taskRow.Field<string>("Title"),
                             dayOfWeek,
                             taskRow["Id"]);
-                        BusyTime += tentativeEnd - tentativeStart;
+                            BusyTime += tentativeEnd - tentativeStart;
 
-                        // Обновляем дедлайн с учётом реальной даты/времени
-                        TaskKey taskKey = new TaskKey(dueDate, Convert.ToInt32(taskRow["Id"]));
-                        Deadline[taskKey] = taskRow["Title"].ToString();
+                            // Обновляем дедлайн с учётом реальной даты/времени
+                            TaskKey taskKey = new TaskKey(dueDate, Convert.ToInt32(taskRow["Id"]));
+                            Deadline[taskKey] = taskRow["Title"].ToString();
 
-                        tasksList.Remove(taskRow);
-                        currentFreeStart = tentativeEnd;
-                        isAfterScheduled = false;
+                            tasksList.Remove(taskRow);
+                            currentFreeStart = tentativeEnd;
+                            isAfterScheduled = false;
+                        }
                     }
                 }
             }
@@ -410,18 +518,21 @@ namespace ScheduleTaskCoordinator
             {
                 FreeTime += freeEnd - currentFreeStart;
                 mergedTable.Rows.Add(
-                    russianDay,
-                    $"{FormatTime(currentFreeStart)} - {FormatTime(freeEnd)}",
-                    "Free",
-                    DBNull.Value, DBNull.Value,
-                    dayOfWeek, DBNull.Value);
+                russianDay,
+                $"{FormatTime(currentFreeStart)} - {FormatTime(freeEnd)}",
+                "Free",
+                DBNull.Value, DBNull.Value,
+                dayOfWeek, DBNull.Value);
             }
 
             return freeEnd;
         }
-        private string FormatTime(TimeSpan time) {
-            return time.ToString(@"hh\:mm\:ss");
+
+        private string FormatTime(TimeSpan time)
+        {
+            return time.ToString(@"hh\:mm");
         }
+
         private void UpdateTaskInformation()
         {
             // Список для хранения всех будущих дедлайнов
@@ -433,11 +544,11 @@ namespace ScheduleTaskCoordinator
                 label1.Text = "Предстоящие задания:\n" + string.Join("\n", futureDeadlines);
             else
                 label1.Text = "Нет предстоящих заданий";
-            
         }
+
         private void AskForPreparationTime()
         {
-            string userInput = Interaction.InputBox("Введите время на подготовку (в формате hh:mm)", "Время на подготовку", "00:10:00");
+            string userInput = Interaction.InputBox("Введите время на подготовку (в формате hh:mm)", "Время на подготовку", "00:10");
             if (TimeSpan.TryParse(userInput, out TimeSpan result))
                 preparationTime = result;
             else
@@ -446,45 +557,66 @@ namespace ScheduleTaskCoordinator
                 AskForPreparationTime(); // Запрашиваем снова, если ввод неправильный
             }
         }
+
         /// <summary>
         /// Записывает идентификаторы задач для текущего дня в файл.
         /// </summary>
         private void LogTaskIds(DataTable mergedData)
         {
-            string filePath = "task_ids.txt";
-            DayOfWeek currentDay = DateTime.Now.DayOfWeek;
-            List<string> taskIds = mergedData.AsEnumerable()
-                .Where(row => row.Field<int?>("DayOfWeekNumber") == (int)currentDay)
-                .Select(row => row["TaskId"].ToString())
-                .ToList();
-            File.WriteAllLines(filePath, taskIds);
+            try
+            {
+                string filePath = "task_ids.txt";
+                DayOfWeek currentDay = DateTime.Now.DayOfWeek;
+                List<string> taskIds = new List<string>();
+                foreach (DataRow row in mergedData.Rows)
+                {
+                    if (!row.Table.Columns.Contains("DayOfWeekNumber")) continue;
+                    if (row.IsNull("DayOfWeekNumber")) continue;
+                    int dow = Convert.ToInt32(row["DayOfWeekNumber"]);
+                    if (dow != (int)currentDay) continue;
+                    if (row.IsNull("TaskId")) continue;
+                    taskIds.Add(row["TaskId"].ToString());
+                }
+                File.WriteAllLines(filePath, taskIds);
+            }
+            catch (Exception ex)
+            {
+                // не ломаем UI из-за ошибки логирования
+                Console.WriteLine("LogTaskIds error: " + ex.Message);
+            }
         }
+
         /// <summary>
         /// Преобразует тип указанного столбца DataTable в заданный тип.
-       	/// </summary>
+        /// Более безопасная реализация: создаём новую таблицу и конвертируем значения по одной строке.
+        /// </summary>
         private DataTable ConvertColumnType(DataTable dt, string columnName, Type newType)
         {
             DataTable newTable = dt.Clone();
             newTable.Columns[columnName].DataType = newType;
+
             foreach (DataRow row in dt.Rows)
-                newTable.ImportRow(row);
-            foreach (DataRow row in newTable.Rows)
-                row[columnName] = Convert.ChangeType(row[columnName], newType);
+            {
+                var newRow = newTable.NewRow();
+                foreach (DataColumn col in dt.Columns)
+                {
+                    if (col.ColumnName == columnName)
+                    {
+                        if (row.IsNull(col))
+                            newRow[col.ColumnName] = DBNull.Value;
+                        else
+                            newRow[col.ColumnName] = Convert.ChangeType(row[col], newType, CultureInfo.InvariantCulture);
+                    }
+                    else
+                    {
+                        newRow[col.ColumnName] = row[col.ColumnName];
+                    }
+                }
+                newTable.Rows.Add(newRow);
+            }
             return newTable;
         }
-        private void DeleteExpiredTasks()
-        {
-            try
-            {
-                string deleteQuery = $"DELETE FROM Tasks WHERE DueDate <= '{DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")}'";
-                connector.ExecuteQuery(deleteQuery);
-                LoadAndUpdateData();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error deleting expired tasks: {ex.Message}");
-            }
-        }
+
         private void DeleteLoggedTasks()
         {
             try
@@ -495,8 +627,11 @@ namespace ScheduleTaskCoordinator
                     string[] taskIds = File.ReadAllLines(filePath);
                     foreach (string taskId in taskIds)
                     {
-                        string deleteQuery = $"DELETE FROM Tasks WHERE Id = {taskId}";
-                        connector.ExecuteQuery(deleteQuery);
+                        if (int.TryParse(taskId, out int id))
+                        {
+                            string deleteQuery = $"DELETE FROM Tasks WHERE Id = {id}";
+                            connector.ExecuteQuery(deleteQuery);
+                        }
                     }
                     File.WriteAllText(filePath, string.Empty);
                 }
@@ -506,11 +641,13 @@ namespace ScheduleTaskCoordinator
                 MessageBox.Show($"Error deleting logged tasks: {ex.Message}");
             }
         }
+
         private string GetRussianDayOfWeek(int dayOfWeek)
         {
             string[] russianDays = { "Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота" };
             return russianDays[dayOfWeek % 7];
         }
+
         private void DataGridView1_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
@@ -528,16 +665,19 @@ namespace ScheduleTaskCoordinator
                 }
             }
         }
+
         private void HandleMandatoryTask(Action<int> action)
         {
             if (selectedRow != null)
             {
-                string taskType = selectedRow.Cells["Type"].Value.ToString();
-                if (taskType == "Mandatory")
+                var typeCell = selectedRow.Cells["Type"].Value;
+                if (typeCell != null && typeCell.ToString() == "Mandatory")
                 {
-                    int taskId = (int)selectedRow.Cells["TaskId"].Value;
-                    action(taskId);
-                    LoadAndUpdateData();
+                    if (selectedRow.Cells["TaskId"].Value != null && int.TryParse(selectedRow.Cells["TaskId"].Value.ToString(), out int taskId))
+                    {
+                        action(taskId);
+                        LoadAndUpdateData();
+                    }
                 }
                 else
                 {
@@ -545,6 +685,7 @@ namespace ScheduleTaskCoordinator
                 }
             }
         }
+
         private void PostponeMenuItem_Click(object sender, EventArgs e)
         {
             HandleMandatoryTask(taskId =>
@@ -553,6 +694,7 @@ namespace ScheduleTaskCoordinator
                 postponeForm.ShowDialog();
             });
         }
+
         private void BorderTaskMenuItem_Click(object sender, EventArgs e)
         {
             HandleMandatoryTask(taskId =>
@@ -561,106 +703,194 @@ namespace ScheduleTaskCoordinator
                 borderTaskForm.ShowDialog();
             });
         }
+
         private void DataGridView1_ColumnHeaderMouseClick(object sender, DataGridViewCellMouseEventArgs e)
         {
             DataGridViewColumn clickedColumn = dataGridView1.Columns[e.ColumnIndex];
-            if (clickedColumn.Name == "DayOfWeek")
+            if (clickedColumn.Name == "DayOfWeek" && dataGridView1.Columns.Contains("DayOfWeekNumber"))
                 dataGridView1.Sort(dataGridView1.Columns["DayOfWeekNumber"], ListSortDirection.Ascending);
         }
+
         private void DataGridView1_DataBindingComplete(object sender, DataGridViewBindingCompleteEventArgs e)
         {
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
-                string type = row.Cells["Type"].Value.ToString();
-                if (type == "Free")
-                    row.DefaultCellStyle.BackColor = Color.LightGreen;
-                else if (type == "Scheduled")
-                    row.DefaultCellStyle.BackColor = Color.LightSkyBlue;
-                else if (type == "Mandatory")
-                    row.DefaultCellStyle.BackColor = Color.PaleVioletRed;
+                if (dataGridView1.Columns.Contains("Type"))
+                {
+                    var cellVal = row.Cells["Type"].Value;
+                    if (cellVal == null || cellVal == DBNull.Value) continue;
+
+                    string type = cellVal.ToString();
+
+                    if (type == "Free")
+                        row.DefaultCellStyle.BackColor = Color.FromArgb(88, 165, 209);
+                    else if (type == "Scheduled")
+                        row.DefaultCellStyle.BackColor = Color.FromArgb(144, 111, 217);
+                    else if (type == "Mandatory")
+                        row.DefaultCellStyle.BackColor = Color.FromArgb(214, 126, 195);
+                    row.DefaultCellStyle.ForeColor = Color.White;
+                }
             }
         }
+
         private void ScheduleToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ScheduleForm form = new ScheduleForm();
             form.ShowDialog();
             LoadAndUpdateData();
         }
-        private void dataGridView1_MouseClick(object sender, EventArgs e)
-        {
-            LoadAndUpdateData();
-        }
+
         private void CaseToolStripMenuItem_Click(object sender, EventArgs e)
         {
             CasesForm form = new CasesForm();
             form.ShowDialog();
             LoadAndUpdateData();
         }
+
         private void DelayToolStripMenuItem_Click(object sender, EventArgs e)
         {
             DelayForm delayForm = new DelayForm();
             delayForm.ShowDialog();
             LoadAndUpdateData();
         }
+
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
         {
             Settings.Default.LastOnlineTime = DateTime.Now;
             Settings.Default.Save();
         }
+
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             Settings.Default.LastOnlineTime = DateTime.Now;
             Settings.Default.Save();
         }
+
+        
+        /// <summary>
+        /// Обновлённый timer1_Tick:
+        /// 1) Двигает левую границу свободного времени текущим временем
+        /// 2) Уменьшает DelayTime на 1 минуту для задач, у которых оно есть
+        /// </summary>
         private void timer1_Tick(object sender, EventArgs e)
         {
-            // Текущее время без миллисекунд
-            var now = DateTime.Now;
-            var nowTs = now.TimeOfDay - TimeSpan.FromMilliseconds(now.TimeOfDay.Milliseconds);
-            int todayDow = (int)now.DayOfWeek;
-
-            // 1) Удаляем все просроченные "Free"-строки для сегодняшнего дня
-            for (int i = dataGridView1.Rows.Count - 1; i >= 0; i--)
+            try
             {
-                var row = dataGridView1.Rows[i];
-                if (row.Cells["Type"].Value?.ToString() == "Free" &&
-                    Convert.ToInt32(row.Cells["DayOfWeekNumber"].Value) == todayDow)
+                if (!timerSwitchedTo1s)
                 {
-                    var endText = row.Cells["TimeInterval"].Value.ToString().Split('-')[1].Trim();
-                    var endTs = TimeSpan.Parse(endText);
-                    if (nowTs >= endTs)
+                    timer1.Interval = 60000;
+                    timerSwitchedTo1s = true;
+                }
+
+                var now = DateTime.Now;
+                var nowTs = now.TimeOfDay - TimeSpan.FromMilliseconds(now.TimeOfDay.Milliseconds);
+                int todayDow = (int)now.DayOfWeek;
+
+                if (!(dataGridView1.DataSource is DataTable dt)) return;
+
+                // 1) Удаляем все просроченные "Free"-строки для сегодняшнего дня
+                for (int i = dt.Rows.Count - 1; i >= 0; i--)
+                {
+                    var row = dt.Rows[i];
+                    if (row.Table.Columns.Contains("Type") && row.Table.Columns.Contains("DayOfWeekNumber"))
                     {
-                        dataGridView1.Rows.RemoveAt(i);
+                        var typeVal = row["Type"];
+                        var dowVal = row["DayOfWeekNumber"];
+                        if (typeVal != DBNull.Value && dowVal != DBNull.Value && typeVal.ToString() == "Free" && Convert.ToInt32(dowVal) == todayDow)
+                        {
+                            var endText = row["TimeInterval"].ToString().Split('-')[1].Trim();
+                            var endTs = TimeSpan.Parse(endText);
+                            if (nowTs >= endTs)
+                            {
+                                dt.Rows.RemoveAt(i);
+                            }
+                        }
+                    }
+                }
+
+                // 2) Для ПЕРВОГО "Free" слота сегодня двигаем ЛЕВую границу, правая неподвижна
+                if (dt.Rows.Count == 0) return;
+
+                var firstRow = dt.Rows[0];
+                if (firstRow["Type"] != DBNull.Value && firstRow["Type"].ToString() == "Free" &&
+                    firstRow["DayOfWeekNumber"] != DBNull.Value && Convert.ToInt32(firstRow["DayOfWeekNumber"]) == todayDow)
+                {
+                    var parts = firstRow["TimeInterval"].ToString().Split('-');
+                    var endPart = parts[1].Trim();
+                    var endTs = TimeSpan.Parse(endPart);
+
+                    // Округляем текущее время
+                    var nowRounded = nowTs;
+                    if (nowRounded.Seconds >= 30)
+                        nowRounded = nowRounded.Add(TimeSpan.FromMinutes(1));
+                    nowRounded = new TimeSpan(nowRounded.Hours, nowRounded.Minutes, 0);
+
+                    // Двигаем левую границу к текущему времени, правая остаётся
+                    firstRow["TimeInterval"] = $"{FormatTime(nowRounded)} - {FormatTime(endTs)}";
+                }
+
+                // 3) Уменьшаем DelayTime на 1 минуту для задач, у которых оно есть
+                foreach (DataRow row in dt.Rows)
+                {
+                    // Только для текущего дня
+                    if (row.IsNull("DayOfWeekNumber") || Convert.ToInt32(row["DayOfWeekNumber"]) != todayDow)
+                        continue;
+
+                    // Только для задач (Type = "Mandatory")
+                    if (row.IsNull("Type") || row["Type"].ToString() != "Mandatory")
+                        continue;
+
+                    // Проверяем наличие DelayTime в базе
+                    if (row.Table.Columns.Contains("DelayTime") && !row.IsNull("DelayTime"))
+                    {
+                        if (TimeSpan.TryParse(row["DelayTime"].ToString(), out TimeSpan delayTime))
+                        {
+                            // Если DelayTime > 0, уменьшаем на 1 минуту
+                            if (delayTime > TimeSpan.Zero)
+                            {
+                                TimeSpan newDelayTime = delayTime.Subtract(TimeSpan.FromMinutes(1));
+                                if (newDelayTime < TimeSpan.Zero)
+                                    newDelayTime = TimeSpan.Zero;
+
+                                // Обновляем в БД
+                                if (row.Table.Columns.Contains("TaskId") && !row.IsNull("TaskId"))
+                                {
+                                    int taskId = Convert.ToInt32(row["TaskId"]);
+                                    string updateQuery = $"UPDATE Tasks SET DelayTime = '{newDelayTime.ToString(@"hh\:mm\:ss")}' WHERE Id = {taskId}";
+                                    try
+                                    {
+                                        connector.ExecuteQuery(updateQuery);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine($"Error updating DelayTime: {ex.Message}");
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-
-            // 2) Проверяем только самую первую строку
-            if (dataGridView1.Rows.Count == 0)
-                return;
-
-            var firstRow = dataGridView1.Rows[0];
-            // Обновляем только если это свободное время сегодня
-            if (firstRow.Cells["Type"].Value?.ToString() == "Free" &&
-                Convert.ToInt32(firstRow.Cells["DayOfWeekNumber"].Value) == todayDow)
+            catch (Exception ex)
             {
-                var parts = firstRow.Cells["TimeInterval"].Value.ToString().Split('-');
-                var endPart = parts[1].Trim();
-
-                // Меняем только начало
-                firstRow.Cells["TimeInterval"].Value = $"{nowTs:hh\\:mm\\:ss} - {endPart}";
+                Console.WriteLine("timer1_Tick error: " + ex.Message);
             }
-            // Иначе — это задача, не трогаем ничего
         }
 
-        public struct TaskKey
+        public struct TaskKey : IEquatable<TaskKey>
         {
             public DateTime DueDate { get; }
             public int TaskId { get; }
+
             public TaskKey(DateTime dueDate, int taskId)
             {
                 DueDate = dueDate;
                 TaskId = taskId;
+            }
+
+            public bool Equals(TaskKey other)
+            {
+                return DueDate == other.DueDate && TaskId == other.TaskId;
             }
         }
     }
