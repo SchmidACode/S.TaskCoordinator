@@ -41,9 +41,9 @@ namespace ScheduleTaskCoordinator
             try
             {
                 string query = @"
-SELECT *
-FROM Tasks
-ORDER BY DueDate ASC";
+                SELECT *
+                FROM Tasks
+                ORDER BY DueDate ASC";
                 DataTable dataTable = connector.LoadSortedDataFromDB(query);
 
                 dataGridView.DataSource = dataTable;

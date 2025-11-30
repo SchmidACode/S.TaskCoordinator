@@ -113,7 +113,7 @@ namespace ScheduleTaskCoordinator
             this.dataGridView1.RowHeadersWidth = 51;
             this.dataGridView1.RowTemplate.Height = 26;
             this.dataGridView1.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dataGridView1.Size = new System.Drawing.Size(820, 592);
+            this.dataGridView1.Size = new System.Drawing.Size(900, 592);
             this.dataGridView1.TabIndex = 1;
             // 
             // timer1
@@ -127,7 +127,7 @@ namespace ScheduleTaskCoordinator
             this.labelFreeTime.AutoSize = true;
             this.labelFreeTime.Font = new System.Drawing.Font("Segoe UI", 11F);
             this.labelFreeTime.ForeColor = System.Drawing.Color.White;
-            this.labelFreeTime.Location = new System.Drawing.Point(840, 60);
+            this.labelFreeTime.Location = new System.Drawing.Point(920, 60);
             this.labelFreeTime.Name = "labelFreeTime";
             this.labelFreeTime.Size = new System.Drawing.Size(172, 25);
             this.labelFreeTime.TabIndex = 2;
@@ -138,7 +138,7 @@ namespace ScheduleTaskCoordinator
             this.labelBusyTime.AutoSize = true;
             this.labelBusyTime.Font = new System.Drawing.Font("Segoe UI", 11F);
             this.labelBusyTime.ForeColor = System.Drawing.Color.White;
-            this.labelBusyTime.Location = new System.Drawing.Point(840, 140);
+            this.labelBusyTime.Location = new System.Drawing.Point(920, 140);
             this.labelBusyTime.Name = "labelBusyTime";
             this.labelBusyTime.Size = new System.Drawing.Size(174, 50);
             this.labelBusyTime.TabIndex = 3;
@@ -149,7 +149,7 @@ namespace ScheduleTaskCoordinator
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Segoe UI", 11F);
             this.label1.ForeColor = System.Drawing.Color.White;
-            this.label1.Location = new System.Drawing.Point(840, 230);
+            this.label1.Location = new System.Drawing.Point(920, 230);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(201, 50);
             this.label1.TabIndex = 4;
